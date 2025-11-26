@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { logger } from "../../utils";
 import type { User } from "../../types/auth";
 import { Button, FormInput } from "../../components/ui";
+import { isValidEmail } from "../../utils";
 
 interface AccountSetupScreenProps {
   onNext: (userData: Partial<User>) => void;
@@ -20,10 +21,11 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    const trimmedEmail = formData.email.trim();
 
-    if (!formData.email) {
+    if (!trimmedEmail) {
       newErrors.email = "Email là bắt buộc";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!isValidEmail(trimmedEmail)) {
       newErrors.email = "Email không hợp lệ";
     }
 
@@ -40,7 +42,7 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
       setIsLoading(true);
       try {
         const userData: Partial<User> = {
-          email: formData.email,
+          email: formData.email.trim(),
           fullName: formData.fullName,
           phone: formData.phone,
           gender: formData.gender || undefined,
@@ -53,13 +55,11 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
   };
 
   const handleSocialLogin = (provider: string) => {
-    // Placeholder for social login
     logger.info(`Social login initiated with ${provider}`);
   };
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-white">
-      {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-100">
         <button
           onClick={onBack}
@@ -70,7 +70,6 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
         <span className="text-sm text-gray-500 font-medium">1/4</span>
       </div>
 
-      {/* Content */}
       <div className="flex-1 flex flex-col px-6 py-8 max-w-md mx-auto w-full">
         <h1 className="text-2xl font-bold text-gray-900 text-center mb-3">
           Đăng ký tài khoản
@@ -79,7 +78,6 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
           Tạo tài khoản mới cho bạn
         </p>
 
-        {/* Form */}
         <div className="space-y-6 flex-1">
           <FormInput
             type="email"
@@ -89,15 +87,9 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
             error={errors.email}
           />
 
-          <FormInput
-            type="password"
-            placeholder="Mật khẩu"
-          />
+          <FormInput type="password" placeholder="Mật khẩu" />
 
-          <FormInput
-            type="password"
-            placeholder="Xác nhận mật khẩu"
-          />
+          <FormInput type="password" placeholder="Xác nhận mật khẩu" />
 
           <FormInput
             type="text"
@@ -108,7 +100,6 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
           />
         </div>
 
-        {/* Register Button */}
         <div className="space-y-4 mt-8">
           <Button
             onClick={handleSubmit}
@@ -126,7 +117,6 @@ const AccountSetupScreen: React.FC<AccountSetupScreenProps> = ({ onNext, onBack 
             )}
           </Button>
 
-          {/* Social Login */}
           <Button
             onClick={() => handleSocialLogin("facebook")}
             variant="outline"

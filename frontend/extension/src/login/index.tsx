@@ -1,8 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AuthProvider } from "../providers/AuthProvider";
-import { I18nProvider } from "../providers/I18nProvider";
-import { ThemeProvider } from "../providers/ThemeProvider";
+import { AppProviders } from "../providers";
 import { ErrorBoundary } from "../components/common";
 import LoginApp from "./LoginApp";
 import "../styles/global.css";
@@ -17,13 +15,9 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <I18nProvider>
-          <ThemeProvider>
-            <LoginApp />
-          </ThemeProvider>
-        </I18nProvider>
-      </AuthProvider>
+      <AppProviders>
+        <LoginApp />
+      </AppProviders>
     </ErrorBoundary>
   </React.StrictMode>
 );

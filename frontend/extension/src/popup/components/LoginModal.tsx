@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { FormInput, Button, Modal } from "../../components/ui";
-import { logger, STORAGE_KEYS } from "../../utils";
+import { logger, STORAGE_KEYS, isValidEmail } from "../../utils";
 import { useToast } from "../../providers";
 import { authService } from "../../services/auth.service";
 import { useAuth } from "../../hooks";
+import { useLanguageContext } from "../../providers/LanguageProvider";
 
 interface LoginModalProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 }) => {
   const { signIn } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguageContext();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -28,18 +30,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [resetEmail, setResetEmail] = useState("");
 
   const validateEmail = (email: string) => {
-    if (!email) {
-      return "Email la bat buoc";
+    const trimmed = email.trim();
+    if (!trimmed) {
+      return t("errors.emailRequired", "Email là bắt buộc");
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      return "Email khong hop le";
+    if (!isValidEmail(trimmed)) {
+      return t("errors.emailInvalid", "Email không hợp lệ");
     }
     return "";
   };
 
   const validatePassword = (password: string) => {
     if (!password) {
-      return "Mat khau la bat buoc";
+      return t("errors.passwordRequired", "Mật khẩu là bắt buộc");
     }
     return "";
   };
@@ -69,14 +72,15 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleLogin = async () => {
     if (!validateForm()) {
-      showToast("error", "Vui long kiem tra lai thong tin");
+      showToast("error", t("errors.checkInformation", "Vui lòng kiểm tra lại thông tin"));
       return;
     }
 
     setIsLoading(true);
     try {
+      const trimmedEmail = formData.email.trim();
       const response = await authService.login({
-        email: formData.email.trim(),
+        email: trimmedEmail,
         password: formData.password,
       });
 
@@ -99,7 +103,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         },
         () => {
           chrome.storage.local.remove([STORAGE_KEYS.GUEST_MODE], () => {
-            showToast("success", "Dang nhap thanh cong!");
+            showToast("success", t("messages.loginSuccess", "Đăng nhập thành công!"));
             onLoginSuccess();
           });
         }
@@ -109,7 +113,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Dang nhap that bai. Vui long thu lai";
+          : t("login.error.invalidCredentials", "Đăng nhập thất bại. Vui lòng thử lại");
       showToast("error", errorMessage);
       setErrors({ password: errorMessage });
     } finally {
@@ -118,24 +122,25 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   const handleForgotPassword = async () => {
-    if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
-      showToast("error", "Vui long nhap email hop le");
+    const trimmed = resetEmail.trim();
+    if (!trimmed || !isValidEmail(trimmed)) {
+      showToast("error", t("errors.resetEmailInvalid", "Vui lòng nhập email hợp lệ"));
       return;
     }
 
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      logger.info("Password reset requested for:", resetEmail);
+      logger.info("Password reset requested for:", trimmed);
       showToast(
         "success",
-        "Link dat lai mat khau da duoc gui den email cua ban"
+        t("messages.resetLinkSent", "Link đặt lại mật khẩu đã được gửi đến email của bạn")
       );
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (error) {
       logger.error("Password reset error:", error);
-      showToast("error", "Co loi xay ra. Vui long thu lai");
+      showToast("error", t("messages.genericError", "Có lỗi xảy ra. Vui lòng thử lại"));
     } finally {
       setIsLoading(false);
     }
@@ -146,16 +151,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
       <Modal
         isOpen={true}
         onClose={() => setShowForgotPassword(false)}
-        title="Quen mat khau"
+        title={t("auth.forgotPasswordTitle", "Quên mật khẩu")}
         size="sm"
       >
         <p className="text-sm text-gray-600 mb-4">
-          Nhap email cua ban de nhan link dat lai mat khau
+          {t(
+            "login.reset.prompt",
+            "Nhập email của bạn để nhận link đặt lại mật khẩu"
+          )}
         </p>
 
         <FormInput
           type="email"
-          placeholder="Email"
+          placeholder={t("auth.emailPlaceholder", "Email")}
           value={resetEmail}
           onChange={(e) => setResetEmail(e.target.value)}
         />
@@ -166,14 +174,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
             onClick={() => setShowForgotPassword(false)}
             className="flex-1"
           >
-            Huy
+            {t("common.cancel", "Hủy")}
           </Button>
           <Button
             onClick={handleForgotPassword}
             disabled={isLoading}
             className="flex-1"
           >
-            {isLoading ? "Dang gui..." : "Gui"}
+            {isLoading ? t("auth.sendingReset", "Đang gửi...") : t("common.ok", "Gửi")}
           </Button>
         </div>
       </Modal>
@@ -181,11 +189,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
   }
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Dang nhap" size="sm">
+    <Modal isOpen={true} onClose={onClose} title={t("auth.login", "Đăng nhập")} size="sm">
       <div className="space-y-4">
         <FormInput
           type="email"
-          placeholder="Email"
+          placeholder={t("auth.emailPlaceholder", "Email")}
           value={formData.email}
           onChange={(e) => {
             setFormData({ ...formData, email: e.target.value });
@@ -199,7 +207,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
         <FormInput
           type="password"
-          placeholder="Mat khau"
+          placeholder={t("auth.passwordPlaceholder", "Mật khẩu")}
           value={formData.password}
           onChange={(e) => {
             setFormData({ ...formData, password: e.target.value });
@@ -216,7 +224,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           onClick={() => setShowForgotPassword(true)}
           className="text-sm text-blue-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
         >
-          Quen mat khau?
+          {t("auth.forgotPassword", "Quên mật khẩu?")}
         </button>
       </div>
 
@@ -228,20 +236,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
         {isLoading ? (
           <div className="flex items-center justify-center space-x-2">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            <span>Dang xu ly...</span>
+            <span>{t("login.loading", "Đang đăng nhập...")}</span>
           </div>
         ) : (
-          "Dang nhap"
+          t("auth.login", "Đăng nhập")
         )}
       </Button>
 
       <p className="text-center text-sm text-gray-600 mt-4">
-        Chua co tai khoan?{" "}
+        {t("auth.noAccount", "Chưa có tài khoản?")}{" "}
         <button
           onClick={onSwitchToRegister}
           className="text-blue-600 hover:underline font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
         >
-          Dang ky ngay
+          {t("auth.register", "Đăng ký ngay")}
         </button>
       </p>
     </Modal>

@@ -7,3 +7,4 @@ export * from './debounce';
 export * from './logger';
 export * from './navigation';
 export * from './window';
+export * from './validation';

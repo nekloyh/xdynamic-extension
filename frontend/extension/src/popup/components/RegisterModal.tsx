@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { FormInput, Button, Modal } from "../../components/ui";
-import { logger, STORAGE_KEYS } from "../../utils";
+import { logger, STORAGE_KEYS, isValidEmail } from "../../utils";
 import { useToast } from "../../providers";
 import { authService } from "../../services/auth.service";
 import { useAuth } from "../../hooks";
+import { useLanguageContext } from "../../providers/LanguageProvider";
 
 interface RegisterModalProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
 }) => {
   const { signIn } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguageContext();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -28,35 +30,36 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = (email: string) => {
-    if (!email) {
-      return "Email la bat buoc";
+    const trimmed = email.trim();
+    if (!trimmed) {
+      return t("errors.emailRequired", "Email là bắt buộc");
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      return "Email khong hop le";
+    if (!isValidEmail(trimmed)) {
+      return t("errors.emailInvalid", "Email không hợp lệ");
     }
     return "";
   };
 
   const validatePassword = (password: string) => {
     if (!password) {
-      return "Mat khau la bat buoc";
+      return t("errors.passwordRequired", "Mật khẩu là bắt buộc");
     }
     if (password.length < 6) {
-      return "Mat khau phai co it nhat 6 ky tu";
+      return t("errors.passwordLength", "Mật khẩu phải có ít nhất 6 ký tự");
     }
     return "";
   };
 
   const validateConfirmPassword = (confirmPassword: string) => {
     if (formData.password !== confirmPassword) {
-      return "Mat khau khong khop";
+      return t("errors.passwordMismatch", "Mật khẩu không khớp");
     }
     return "";
   };
 
   const validateFullName = (fullName: string) => {
     if (!fullName) {
-      return "Ten la bat buoc";
+      return t("errors.fullNameRequired", "Tên là bắt buộc");
     }
     return "";
   };
@@ -104,14 +107,15 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
 
   const handleRegister = async () => {
     if (!validateForm()) {
-      showToast("error", "Vui long kiem tra lai thong tin");
+      showToast("error", t("errors.checkInformation", "Vui lòng kiểm tra lại thông tin"));
       return;
     }
 
     setIsLoading(true);
     try {
+      const trimmedEmail = formData.email.trim();
       const response = await authService.register({
-        email: formData.email.trim(),
+        email: trimmedEmail,
         password: formData.password,
       });
 
@@ -130,7 +134,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         },
         () => {
           chrome.storage.local.remove([STORAGE_KEYS.GUEST_MODE], () => {
-            showToast("success", "Dang ky thanh cong!");
+            showToast("success", t("messages.registrationSuccess", "Đăng ký thành công!"));
             onRegisterSuccess();
           });
         }
@@ -140,7 +144,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Dang ky that bai. Vui long thu lai";
+          : t("messages.genericError", "Đăng ký thất bại. Vui lòng thử lại");
       showToast("error", errorMessage);
       setErrors({ email: errorMessage });
     } finally {
@@ -149,11 +153,11 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Dang ky" size="sm">
+    <Modal isOpen={true} onClose={onClose} title={t("auth.register", "Đăng ký")} size="sm">
       <div className="space-y-4">
         <FormInput
           type="text"
-          placeholder="Ho va ten"
+          placeholder={t("auth.namePlaceholder", "Họ và tên")}
           value={formData.fullName}
           onChange={(e) => {
             setFormData({ ...formData, fullName: e.target.value });
@@ -167,7 +171,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
 
         <FormInput
           type="email"
-          placeholder="Email"
+          placeholder={t("auth.emailPlaceholder", "Email")}
           value={formData.email}
           onChange={(e) => {
             setFormData({ ...formData, email: e.target.value });
@@ -181,7 +185,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
 
         <FormInput
           type="password"
-          placeholder="Mat khau"
+          placeholder={t("auth.passwordPlaceholder", "Mật khẩu")}
           value={formData.password}
           onChange={(e) => {
             setFormData({ ...formData, password: e.target.value });
@@ -195,7 +199,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
 
         <FormInput
           type="password"
-          placeholder="Xac nhan mat khau"
+          placeholder={t("auth.confirmPassword", "Xác nhận mật khẩu")}
           value={formData.confirmPassword}
           onChange={(e) => {
             setFormData({ ...formData, confirmPassword: e.target.value });
@@ -216,20 +220,20 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         {isLoading ? (
           <div className="flex items-center justify-center space-x-2">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            <span>Dang xu ly...</span>
+            <span>{t("common.loading", "Đang xử lý...")}</span>
           </div>
         ) : (
-          "Dang ky"
+          t("auth.register", "Đăng ký")
         )}
       </Button>
 
       <p className="text-center text-sm text-gray-600 mt-4">
-        Da co tai khoan?{" "}
+        {t("auth.haveAccount", "Đã có tài khoản?")}{" "}
         <button
           onClick={onSwitchToLogin}
           className="text-blue-600 hover:underline font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
         >
-          Dang nhap
+          {t("auth.login", "Đăng nhập")}
         </button>
       </p>
     </Modal>

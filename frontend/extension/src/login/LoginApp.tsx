@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { logger, navigateToPage } from "../utils";
 import { useAuth } from "../hooks";
+import { useLanguageContext } from "../providers/LanguageProvider";
 import LoginScreen from "./components/LoginScreen";
 import ForgotPasswordModal from "./components/ForgotPasswordModal";
 
@@ -16,6 +17,7 @@ interface LoginState {
 
 const LoginApp: React.FC = () => {
   const { signIn } = useAuth();
+  const { t } = useLanguageContext();
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
@@ -27,20 +29,18 @@ const LoginApp: React.FC = () => {
     needsVerification: false,
   });
 
-  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
+  const handleLogin = async (
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) => {
     setIsLoading(true);
     try {
-      // For demo purposes, we'll simulate login validation
-      // In real app, this would call your auth API
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock login validation
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       if (email && password.length >= 6) {
-        // Check if 2FA is enabled (mock condition)
         const needs2FA = email.includes("2fa") || password.includes("2fa");
-        
+
         if (needs2FA) {
           setLoginState({
             ...loginState,
@@ -51,31 +51,32 @@ const LoginApp: React.FC = () => {
             needsVerification: true,
           });
         } else {
-          // Successful login - create user object and sign in
           const userData = {
             id: "user-" + Date.now(),
             email,
-            fullName: "Demo User", // In real app, get from API response
+            fullName: "Demo User",
             hasCompletedOnboarding: true,
           };
-          
+
           signIn(userData);
-          
-          // Store remember me preference
+
           if (rememberMe) {
             chrome.storage.local.set({ rememberLogin: true });
           }
-          
-          // Redirect to dashboard
-          navigateToPage('DASHBOARD');
+
+          navigateToPage("DASHBOARD");
         }
       } else {
         throw new Error("Invalid credentials");
       }
     } catch (error) {
       logger.error("Login failed", error);
-      // In real app, show error message to user
-      alert("Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.");
+      alert(
+        t(
+          "login.error.invalidCredentials",
+          "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu."
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -84,21 +85,20 @@ const LoginApp: React.FC = () => {
   const handleFacebookLogin = async () => {
     setIsLoading(true);
     try {
-      // Simulate Facebook login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const userData = {
         id: "fb-user-" + Date.now(),
         email: "user@facebook.com",
         fullName: "Facebook User",
         hasCompletedOnboarding: true,
       };
-      
+
       signIn(userData);
-      navigateToPage('DASHBOARD');
+      navigateToPage("DASHBOARD");
     } catch (error) {
       logger.error("Facebook login failed", error);
-      alert("Đăng nhập Facebook thất bại.");
+      alert(t("login.error.facebook", "Đăng nhập Facebook thất bại."));
     } finally {
       setIsLoading(false);
     }
@@ -107,81 +107,93 @@ const LoginApp: React.FC = () => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      // Simulate phone login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const userData = {
         id: "phone-user-" + Date.now(),
         email: "user@phone.com",
         fullName: "Phone User",
         hasCompletedOnboarding: true,
       };
-      
+
       signIn(userData);
-      navigateToPage('DASHBOARD');
+      navigateToPage("DASHBOARD");
     } catch (error) {
       logger.error("Phone login failed", error);
-      alert("Đăng nhập bằng số điện thoại thất bại.");
+      alert(
+        t(
+          "login.error.phone",
+          "Đăng nhập bằng số điện thoại thất bại."
+        )
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    // Open forgot password modal
     setShowForgotPasswordModal(true);
   };
 
   const handleForgotPasswordSubmit = async (email: string) => {
     setIsSendingReset(true);
     try {
-      // Simulate API call to send password reset email
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       logger.info("Password reset email sent to:", email);
-      
-      // Show success message
-      alert(`Đã gửi hướng dẫn đặt lại mật khẩu đến ${email}. Vui lòng kiểm tra email của bạn.`);
-      
-      // Close modal
+
+      alert(
+        t(
+          "login.reset.sent",
+          `Đã gửi hướng dẫn đặt lại mật khẩu đến ${email}. Vui lòng kiểm tra email của bạn.`
+        ).replace("{email}", email)
+      );
+
       setShowForgotPasswordModal(false);
     } catch (error) {
       logger.error("Failed to send password reset email", error);
-      alert("Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.");
+      alert(
+        t(
+          "login.reset.failed",
+          "Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau."
+        )
+      );
     } finally {
       setIsSendingReset(false);
     }
   };
 
   const handleCreateAccount = () => {
-    // Redirect to onboarding flow
-    navigateToPage('ONBOARDING');
+    navigateToPage("ONBOARDING");
   };
 
   const handleVerificationComplete = async () => {
     setIsLoading(true);
     try {
-      // Simulate OTP verification
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create user after successful verification
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const userData = {
         id: "verified-user-" + Date.now(),
         email: loginState.email,
         fullName: "Verified User",
         hasCompletedOnboarding: true,
       };
-      
+
       signIn(userData);
-      
+
       if (loginState.rememberMe) {
         chrome.storage.local.set({ rememberLogin: true });
       }
-      
-      navigateToPage('DASHBOARD');
+
+      navigateToPage("DASHBOARD");
     } catch (error) {
       logger.error("Verification failed", error);
-      alert("Xác thực thất bại. Vui lòng thử lại.");
+      alert(
+        t(
+          "login.error.verification",
+          "Xác thực thất bại. Vui lòng thử lại."
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -195,38 +207,46 @@ const LoginApp: React.FC = () => {
   };
 
   if (loginState.currentStep === "verification") {
-    // Reuse verification screen from onboarding
-    // For now, we'll create a simple placeholder
+    const verificationMessage = t(
+      "login.verificationSubtitle",
+      `Vui lòng nhập mã xác thực được gửi đến ${loginState.email}`
+    ).replace("{email}", loginState.email);
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md w-full space-y-8 text-center">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Xác thực</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {t("login.verificationTitle", "Xác thực")}
+            </h2>
             <p className="text-gray-600 text-sm mb-6">
-              Vui lòng nhập mã xác thực được gửi đến {loginState.email}
+              {verificationMessage}
             </p>
           </div>
-          
+
           <div className="space-y-4">
             <input
               type="text"
-              placeholder="Nhập mã xác thực"
+              placeholder={t(
+                "login.verificationPlaceholder",
+                "Nhập mã xác thực"
+              )}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               maxLength={6}
             />
-            
+
             <button
               onClick={handleVerificationComplete}
               className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
-              Xác nhận
+              {t("login.verificationConfirm", "Xác nhận")}
             </button>
-            
+
             <button
               onClick={handleVerificationBack}
               className="w-full text-gray-600 hover:text-gray-800 py-2"
             >
-              Quay lại đăng nhập
+              {t("login.verificationBack", "Quay lại đăng nhập")}
             </button>
           </div>
         </div>
@@ -244,7 +264,7 @@ const LoginApp: React.FC = () => {
         onCreateAccount={handleCreateAccount}
         isLoading={isLoading}
       />
-      
+
       <ForgotPasswordModal
         isOpen={showForgotPasswordModal}
         onClose={() => setShowForgotPasswordModal(false)}

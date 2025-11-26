@@ -1,8 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AuthProvider } from "../providers/AuthProvider";
-import { I18nProvider } from "../providers/I18nProvider";
-import { ThemeProvider } from "../providers/ThemeProvider";
+import { AppProviders } from "../providers";
 import { ErrorBoundary } from "../components/common";
 import DashboardApp from "./DashboardApp";
 import "../styles/global.css";
@@ -17,13 +15,9 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <I18nProvider>
-          <ThemeProvider>
-            <DashboardApp />
-          </ThemeProvider>
-        </I18nProvider>
-      </AuthProvider>
+      <AppProviders>
+        <DashboardApp />
+      </AppProviders>
     </ErrorBoundary>
   </React.StrictMode>
 );
