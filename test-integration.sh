@@ -25,7 +25,7 @@ if [ "$response" -eq 200 ]; then
     echo -e "${GREEN}✓ Backend is healthy${NC}"
 else
     echo -e "${RED}✗ Backend health check failed (HTTP $response)${NC}"
-    echo -e "${RED}Make sure backend is running: cd BOT_DETECTED_DANGEROUS && python run.py${NC}"
+    echo -e "${RED}Make sure backend is running: cd backend && source venv/bin/activate && python run.py${NC}"
     exit 1
 fi
 
@@ -79,13 +79,14 @@ fi
 echo -e "\n${YELLOW}[5/5] Testing prediction API...${NC}"
 echo -e "${YELLOW}Creating a test image...${NC}"
 
-# Create a simple test image (1x1 red pixel PNG)
-echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==" | base64 -d > /tmp/test_image.png
+# Create a simple test image (1x1 red pixel PNG) in a temp file
+TMPFILE=$(mktemp /tmp/test_image.XXXXXX.png || mktemp)
+echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==" | base64 --decode > "$TMPFILE"
 
 # Test prediction
 prediction_response=$(curl -s -X POST "$BACKEND_URL/api/v1/predict" \
     -H "Authorization: Bearer $TOKEN" \
-    -F "file=@/tmp/test_image.png" \
+    -F "file=@${TMPFILE}" \
     -F "threshold=0.5")
 
 if echo "$prediction_response" | grep -q "predictions"; then
@@ -98,7 +99,7 @@ else
 fi
 
 # Clean up
-rm -f /tmp/test_image.png
+rm -f "$TMPFILE"
 
 # Summary
 echo -e "\n${GREEN}========================================${NC}"
@@ -109,7 +110,7 @@ echo -e "${GREEN}✓ Authentication flow is functional${NC}"
 echo -e "${GREEN}✓ Extension can integrate with backend${NC}"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Build extension: cd Demo-DyXtension/extension && npm run build"
+echo "1. Build extension: cd frontend/extension && npm run build"
 echo "2. Load extension in Chrome: chrome://extensions → Load unpacked → select dist/"
 echo "3. Login with credentials:"
 echo "   Email: $TEST_EMAIL"

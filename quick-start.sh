@@ -5,6 +5,9 @@
 
 set -e  # Exit on error
 
+# Default virtualenv directory (use ".venv")
+VENV_DIR=".venv"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,7 +20,7 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 
 # Check if we're in the right directory
-if [ ! -d "BOT_DETECTED_DANGEROUS" ] || [ ! -d "Demo-DyXtension" ]; then
+if [ ! -d "backend" ] || [ ! -d "frontend" ]; then
     echo -e "${RED}Error: Please run this script from XDynamic_Extension root directory${NC}"
     exit 1
 fi
@@ -64,17 +67,18 @@ read -p "Enter your choice (1-6): " choice
 case $choice in
     1)
         echo -e "${YELLOW}Setting up Backend...${NC}"
-        cd BOT_DETECTED_DANGEROUS
+        cd backend
         
         # Create virtual environment if not exists
-        if [ ! -d "venv" ]; then
+        if [ ! -d "$VENV_DIR" ]; then
             echo "Creating virtual environment..."
-            python3 -m venv venv
+            python -m venv "$VENV_DIR"
         fi
         
         # Activate virtual environment
         echo "Activating virtual environment..."
-        source venv/bin/activate
+        # shellcheck disable=SC1090
+        source "$VENV_DIR/bin/activate"
         
         # Install dependencies
         echo "Installing dependencies..."
@@ -96,12 +100,12 @@ EOL
         fi
         
         echo -e "${GREEN}✓ Backend setup complete!${NC}"
-        echo -e "${YELLOW}To run backend: cd BOT_DETECTED_DANGEROUS && source venv/bin/activate && python run.py${NC}"
+        echo -e "${YELLOW}To run backend: cd backend && source venv/bin/activate && python run.py${NC}"
         ;;
         
     2)
         echo -e "${YELLOW}Setting up Extension...${NC}"
-        cd Demo-DyXtension/extension
+        cd frontend/extension
         
         # Install dependencies
         echo "Installing dependencies..."
@@ -119,7 +123,7 @@ EOL
         fi
         
         echo -e "${GREEN}✓ Extension setup complete!${NC}"
-        echo -e "${YELLOW}To build: cd Demo-DyXtension/extension && npm run build${NC}"
+        echo -e "${YELLOW}To build: cd frontend/extension && npm run build${NC}"
         ;;
         
     3)
@@ -127,13 +131,14 @@ EOL
         
         # Setup Backend
         echo -e "\n${YELLOW}[1/2] Setting up Backend...${NC}"
-        cd BOT_DETECTED_DANGEROUS
+        cd backend
         
-        if [ ! -d "venv" ]; then
-            python3 -m venv venv
+        if [ ! -d "$VENV_DIR" ]; then
+            python -m venv "$VENV_DIR"
         fi
         
-        source venv/bin/activate
+        # shellcheck disable=SC1090
+        source "$VENV_DIR/bin/activate"
         pip install -r requirements.txt
         
         if [ ! -f ".env" ]; then
@@ -151,7 +156,7 @@ EOL
         echo -e "${GREEN}✓ Backend setup complete!${NC}"
         
         # Setup Extension
-        cd ../Demo-DyXtension/extension
+        cd ../frontend/extension
         echo -e "\n${YELLOW}[2/2] Setting up Extension...${NC}"
         
         npm install
@@ -168,21 +173,22 @@ EOL
         echo -e "\n${GREEN}========================================${NC}"
         echo -e "${GREEN}Setup Complete! Next steps:${NC}"
         echo -e "${GREEN}========================================${NC}"
-        echo -e "1. Start backend: ${YELLOW}cd BOT_DETECTED_DANGEROUS && source venv/bin/activate && python run.py${NC}"
-        echo -e "2. Build extension: ${YELLOW}cd Demo-DyXtension/extension && npm run build${NC}"
+        echo -e "1. Start backend: ${YELLOW}cd backend && source venv/bin/activate && python run.py${NC}"
+        echo -e "2. Build extension: ${YELLOW}cd frontend/extension && npm run build${NC}"
         echo -e "3. Load extension in Chrome: ${YELLOW}chrome://extensions${NC} → Load unpacked → select dist/"
         ;;
         
     4)
         echo -e "${YELLOW}Starting Backend...${NC}"
-        cd BOT_DETECTED_DANGEROUS
+        cd backend
         
-        if [ ! -d "venv" ]; then
+        if [ ! -d "$VENV_DIR" ]; then
             echo -e "${RED}Backend not setup. Please run setup first (option 1 or 3)${NC}"
             exit 1
         fi
         
-        source venv/bin/activate
+        # shellcheck disable=SC1090
+        source "$VENV_DIR/bin/activate"
         echo -e "${GREEN}Starting backend on http://localhost:8000${NC}"
         echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
         python run.py
@@ -190,7 +196,7 @@ EOL
         
     5)
         echo -e "${YELLOW}Building Extension...${NC}"
-        cd Demo-DyXtension/extension
+        cd frontend/extension
         
         if [ ! -d "node_modules" ]; then
             echo -e "${RED}Extension not setup. Please run setup first (option 2 or 3)${NC}"
@@ -211,7 +217,7 @@ EOL
         echo -e "${YELLOW}Starting Backend and Building Extension...${NC}"
         
         # Build Extension first
-        cd Demo-DyXtension/extension
+        cd frontend/extension
         
         if [ ! -d "node_modules" ]; then
             echo -e "${RED}Extension not setup. Running setup...${NC}"
@@ -223,22 +229,24 @@ EOL
         echo -e "${GREEN}✓ Extension built!${NC}"
         
         # Start Backend
-        cd ../../BOT_DETECTED_DANGEROUS
+        cd ../../backend
         
-        if [ ! -d "venv" ]; then
+        if [ ! -d "$VENV_DIR" ]; then
             echo -e "${RED}Backend not setup. Running setup...${NC}"
-            python3 -m venv venv
-            source venv/bin/activate
+            python -m venv "$VENV_DIR"
+            # shellcheck disable=SC1090
+            source "$VENV_DIR/bin/activate"
             pip install -r requirements.txt
         else
-            source venv/bin/activate
+            # shellcheck disable=SC1090
+            source "$VENV_DIR/bin/activate"
         fi
         
         echo -e "${GREEN}Starting backend on http://localhost:8000${NC}"
         echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
         echo ""
         echo -e "${GREEN}Don't forget to load extension in Chrome:${NC}"
-        echo -e "chrome://extensions → Load unpacked → select Demo-DyXtension/extension/dist"
+        echo -e "chrome://extensions → Load unpacked → select frontend/extension/dist"
         echo ""
         python run.py
         ;;
