@@ -57,6 +57,22 @@ export const API_ENDPOINTS = {
     WEEKLY: '/api/stats/weekly',
     MONTHLY: '/api/stats/monthly',
   },
+
+  // Payment endpoints
+  PAYMENT: {
+    BILLS: '/api/payment/bills',
+    METHODS: '/api/payment/methods',
+    PROCESS: '/api/payment/process',
+    HISTORY: '/api/payment/history',
+  },
+
+  // Plan endpoints
+  PLAN: {
+    LIST: '/api/plans',
+    CURRENT: '/api/plans/current',
+    UPGRADE: '/api/plans/upgrade',
+    CANCEL: '/api/plans/cancel',
+  },
 } as const;
 
 // API Response types

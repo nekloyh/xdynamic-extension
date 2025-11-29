@@ -1,26 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface WebsiteManagementProps {
   onSave?: () => void;
 }
 
-interface URLItem {
-  id: string;
-  url: string;
-  addedAt: Date;
-  visits: number;
-}
+import { filterService, URLItem } from "../../services/filter.service";
+import { logger } from "../../utils";
 
 const WebsiteManagement: React.FC<WebsiteManagementProps> = ({ onSave }) => {
-  const [whitelist, setWhitelist] = useState<URLItem[]>([
-    { id: "1", url: "chatgpt.com", addedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), visits: 15 },
-    { id: "2", url: "colorhunt.co", addedAt: new Date(Date.now() - 5 * 60 * 60 * 1000), visits: 8 },
-  ]);
-  
-  const [blacklist, setBlacklist] = useState<URLItem[]>([
-    { id: "1", url: "instagram.com", addedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), visits: 0 },
-    { id: "2", url: "youtube.com", addedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), visits: 0 },
-  ]);
+  const [whitelist, setWhitelist] = useState<URLItem[]>([]);
+  const [blacklist, setBlacklist] = useState<URLItem[]>([]);
 
   const [whitelistInput, setWhitelistInput] = useState("");
   const [blacklistInput, setBlacklistInput] = useState("");
@@ -29,6 +18,23 @@ const WebsiteManagement: React.FC<WebsiteManagementProps> = ({ onSave }) => {
   const [isWhitelistAdding, setIsWhitelistAdding] = useState(false);
   const [isBlacklistAdding, setIsBlacklistAdding] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchLists();
+  }, []);
+
+  const fetchLists = async () => {
+    try {
+      const [white, black] = await Promise.all([
+        filterService.getWhitelist(),
+        filterService.getBlacklist()
+      ]);
+      setWhitelist(white);
+      setBlacklist(black);
+    } catch (error) {
+      logger.error("Failed to fetch filter lists:", error);
+    }
+  };
 
   const validateURL = (url: string): boolean => {
     try {
@@ -51,7 +57,7 @@ const WebsiteManagement: React.FC<WebsiteManagementProps> = ({ onSave }) => {
     return `${Math.floor(seconds / 86400)} ngày trước`;
   };
 
-  const handleAddURL = (type: "whitelist" | "blacklist") => {
+  const handleAddURL = async (type: "whitelist" | "blacklist") => {
     const input = type === "whitelist" ? whitelistInput : blacklistInput;
     const cleanUrl = input.replace(/^https?:\/\//, "").trim();
 
@@ -60,34 +66,39 @@ const WebsiteManagement: React.FC<WebsiteManagementProps> = ({ onSave }) => {
       return;
     }
 
-    const newItem: URLItem = {
-      id: Date.now().toString(),
-      url: cleanUrl,
-      addedAt: new Date(),
-      visits: 0,
-    };
-
-    if (type === "whitelist") {
-      setWhitelist([...whitelist, newItem]);
-      setWhitelistInput("");
-      setIsWhitelistAdding(false);
-    } else {
-      setBlacklist([...blacklist, newItem]);
-      setBlacklistInput("");
-      setIsBlacklistAdding(false);
+    try {
+      if (type === "whitelist") {
+        const newItem = await filterService.addToWhitelist(cleanUrl);
+        setWhitelist([...whitelist, newItem]);
+        setWhitelistInput("");
+        setIsWhitelistAdding(false);
+      } else {
+        const newItem = await filterService.addToBlacklist(cleanUrl);
+        setBlacklist([...blacklist, newItem]);
+        setBlacklistInput("");
+        setIsBlacklistAdding(false);
+      }
+      setValidationError(null);
+      onSave?.();
+    } catch (error) {
+      logger.error(`Failed to add to ${type}:`, error);
+      setValidationError("Có lỗi xảy ra khi thêm URL.");
     }
-
-    setValidationError(null);
-    onSave?.();
   };
 
-  const handleDeleteURL = (id: string, type: "whitelist" | "blacklist") => {
-    if (type === "whitelist") {
-      setWhitelist(whitelist.filter(item => item.id !== id));
-    } else {
-      setBlacklist(blacklist.filter(item => item.id !== id));
+  const handleDeleteURL = async (id: string, type: "whitelist" | "blacklist") => {
+    try {
+      if (type === "whitelist") {
+        await filterService.removeFromWhitelist(id);
+        setWhitelist(whitelist.filter(item => item.id !== id));
+      } else {
+        await filterService.removeFromBlacklist(id);
+        setBlacklist(blacklist.filter(item => item.id !== id));
+      }
+      onSave?.();
+    } catch (error) {
+      logger.error(`Failed to remove from ${type}:`, error);
     }
-    onSave?.();
   };
 
   const filteredWhitelist = whitelist.filter(item =>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, useStats } from "../../hooks";
+import { userService } from "../../services/user.service";
 
 interface DashboardScreenProps {
   onNavigateToReporting: () => void;
@@ -37,50 +38,38 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const { user } = useAuth();
   const { blockedCount } = useStats();
   const [metrics, setMetrics] = useState<DashboardMetrics>({
-    dataUsage: { used: 2.3, total: 10, unit: "GB" },
-    speed: { current: 45, average: 42, unit: "Mbps" },
-    billDueDate: "15/11/2025",
+    dataUsage: { used: 0, total: 0, unit: "GB" },
+    speed: { current: 0, average: 0, unit: "Mbps" },
+    billDueDate: "",
     blockedToday: blockedCount,
     protectionLevel: "Cao",
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Simulate real-time updates
   useEffect(() => {
-    const interval = setInterval(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const stats = await userService.getStatistics();
+      // Map stats to metrics
       setMetrics(prev => ({
         ...prev,
-        speed: {
-          ...prev.speed,
-          current: Math.floor(Math.random() * 20) + 35, // 35-55 Mbps
-        },
-        blockedToday: blockedCount + Math.floor(Math.random() * 3),
+        blockedToday: stats.todayBlocked,
+        // Update other metrics as needed based on API response
       }));
-    }, 5000);
+    } catch (error) {
+      console.error("Failed to fetch dashboard stats:", error);
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, [blockedCount]);
+
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Update metrics with new data
-    setMetrics(prev => ({
-      ...prev,
-      dataUsage: {
-        ...prev.dataUsage,
-        used: prev.dataUsage.used + Math.random() * 0.1,
-      },
-      speed: {
-        ...prev.speed,
-        current: Math.floor(Math.random() * 20) + 35,
-        average: Math.floor(Math.random() * 10) + 40,
-      },
-    }));
-    
+    await fetchDashboardData();
     setIsRefreshing(false);
   };
 

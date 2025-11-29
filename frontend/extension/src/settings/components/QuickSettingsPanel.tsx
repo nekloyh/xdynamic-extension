@@ -70,7 +70,7 @@ const QuickSettingsPanel: React.FC<QuickSettingsPanelProps> = ({
       {/* Backdrop */}
       <div
         className={`
-          fixed inset-0 bg-black/40 backdrop-blur-sm z-40
+          fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40
           transition-opacity duration-300
           ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
         `}
@@ -82,7 +82,7 @@ const QuickSettingsPanel: React.FC<QuickSettingsPanelProps> = ({
       <div
         className={`
           fixed top-0 ${position === 'right' ? 'right-0' : 'left-0'}
-          h-full w-80 bg-white dark:bg-gray-800
+          h-full w-80 bg-white/95 dark:bg-slate-900/90 border-l border-slate-200/60 dark:border-slate-800/70
           shadow-2xl z-50
           transform transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : position === 'right' ? 'translate-x-full' : '-translate-x-full'}
@@ -91,7 +91,7 @@ const QuickSettingsPanel: React.FC<QuickSettingsPanelProps> = ({
         aria-label="Quick Settings"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200/70 dark:border-slate-800/70">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +150,7 @@ const QuickSettingsPanel: React.FC<QuickSettingsPanelProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200/70 dark:border-slate-800/70 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur">
           <RippleButton
             variant="ghost"
             fullWidth
@@ -186,7 +186,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   return (
     <button
       onClick={handleToggle}
-      className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-between group"
+      className="w-full p-4 rounded-xl bg-slate-50/90 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 flex items-center justify-between group backdrop-blur"
     >
       <div className="flex items-center gap-3">
         {/* Icon */}

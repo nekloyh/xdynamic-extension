@@ -1,75 +1,61 @@
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../core/config/api';
-
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  createdAt: string;
-  plan: 'free' | 'premium' | 'enterprise';
-}
+import { UserProfile, SecuritySettings, PrivacySettings, UserStatistics } from '../types/common';
 
 export interface UserSettings {
-  filters: {
-    sensitive: boolean;
-    violence: boolean;
-    toxicity: boolean;
-    vice: boolean;
-  };
-  contentTypes: {
-    image: boolean;
-    video: boolean;
-  };
+  security: SecuritySettings;
+  privacy: PrivacySettings;
   notifications: boolean;
-  autoBlock: boolean;
   language: string;
   theme: string;
 }
 
-export interface UserStatistics {
-  totalBlocked: number;
-  todayBlocked: number;
-  weeklyBlocked: number;
-  monthlyBlocked: number;
-  byCategory: {
-    sensitive: number;
-    violence: number;
-    toxicity: number;
-    vice: number;
-  };
-}
+
 
 export class UserService {
   async getProfile(): Promise<UserProfile> {
-    // TODO: Implement actual API call
     const response = await apiService.get<UserProfile>(
       API_ENDPOINTS.USER.PROFILE
     );
 
     if (response.success && response.data) {
-      return response.data;
+      const data = response.data as any;
+      // Map backend fields to frontend interface if needed
+      return {
+        ...response.data,
+        fullName: response.data.fullName || data.name || data.full_name || data.username || '',
+        id: response.data.id || data._id || '',
+      };
     }
 
-    throw new Error('Failed to get user profile');
+    throw new Error(response.error?.message || 'Failed to get user profile');
   }
 
   async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
-    // TODO: Implement actual API call
+    // Create a payload that might satisfy different backend expectations
+    const payload = {
+      ...data,
+      name: data.fullName, // Fallback for backends expecting 'name'
+      full_name: data.fullName, // Fallback for backends expecting 'full_name'
+    };
+
     const response = await apiService.put<UserProfile>(
       API_ENDPOINTS.USER.UPDATE_PROFILE,
-      data
+      payload
     );
 
     if (response.success && response.data) {
-      return response.data;
+      const responseData = response.data as any;
+      return {
+        ...response.data,
+        fullName: response.data.fullName || responseData.name || responseData.full_name || data.fullName || '',
+      };
     }
 
-    throw new Error('Failed to update profile');
+    throw new Error(response.error?.message || 'Failed to update profile');
   }
 
   async getSettings(): Promise<UserSettings> {
-    // TODO: Implement actual API call
     const response = await apiService.get<UserSettings>(
       API_ENDPOINTS.USER.SETTINGS
     );
@@ -78,11 +64,10 @@ export class UserService {
       return response.data;
     }
 
-    throw new Error('Failed to get settings');
+    throw new Error(response.error?.message || 'Failed to get settings');
   }
 
   async updateSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
-    // TODO: Implement actual API call
     const response = await apiService.put<UserSettings>(
       API_ENDPOINTS.USER.UPDATE_SETTINGS,
       settings
@@ -92,11 +77,10 @@ export class UserService {
       return response.data;
     }
 
-    throw new Error('Failed to update settings');
+    throw new Error(response.error?.message || 'Failed to update settings');
   }
 
   async getStatistics(): Promise<UserStatistics> {
-    // TODO: Implement actual API call
     const response = await apiService.get<UserStatistics>(
       API_ENDPOINTS.USER.STATISTICS
     );
@@ -105,7 +89,7 @@ export class UserService {
       return response.data;
     }
 
-    throw new Error('Failed to get statistics');
+    throw new Error(response.error?.message || 'Failed to get statistics');
   }
 }
 

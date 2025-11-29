@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { logger } from "../../utils";
 import { Button } from "../../components/ui";
 import { Plan, UserPlan } from "../../types/common";
+import { planService } from "../../services/plan.service";
 
 interface PlansOverviewScreenProps {
   onNavigateToUpgrade: () => void;
@@ -14,40 +15,24 @@ const PlansOverviewScreen: React.FC<PlansOverviewScreenProps> = ({
 }) => {
   const [currentPlan, setCurrentPlan] = useState<UserPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock current plan data
+
+  // Fetch current plan data
   useEffect(() => {
-    const mockPlan: UserPlan = {
-      id: "user-plan-001",
-      userId: "user-001",
-      plan: {
-        id: "plan-free",
-        type: "free",
-        name: "Basic Free",
-        nameVi: "Miễn phí",
-        price: 0,
-        currency: "đ",
-        period: "month",
-        features: [
-          { id: "f1", text: "Chặn nội dung cơ bản", included: true },
-          { id: "f2", text: "Báo cáo hàng tháng", included: true },
-          { id: "f3", text: "Hỗ trợ email", included: true },
-          { id: "f4", text: "Phát hiện nâng cao", included: false },
-          { id: "f5", text: "Video streaming protection", included: false },
-          { id: "f6", text: "Hỗ trợ ưu tiên 24/7", included: false },
-        ],
-      },
-      startDate: "2025-01-01",
-      endDate: "2099-12-31",
-      status: "active",
-      autoRenew: false,
+    const fetchPlan = async () => {
+      try {
+        const plan = await planService.getCurrentPlan();
+        setCurrentPlan(plan);
+      } catch (error) {
+        logger.error("Failed to fetch current plan:", error);
+        setError("Không thể tải thông tin gói hiện tại");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    // Simulate API call
-    setTimeout(() => {
-      setCurrentPlan(mockPlan);
-      setIsLoading(false);
-    }, 800);
+    fetchPlan();
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -83,11 +68,29 @@ const PlansOverviewScreen: React.FC<PlansOverviewScreenProps> = ({
     );
   }
 
+  
   if (!currentPlan) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Không tìm thấy thông tin gói</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 max-w-md w-full p-8 text-center space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-full bg-blue-50 flex items-center justify-center">
+            <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Chưa có thông tin gói</h2>
+          <p className="text-gray-600 text-sm">
+            {error || "Bạn chưa chọn gói dịch vụ. Hãy khám phá và nâng cấp để mở khóa thêm tính năng."}
+          </p>
+          <Button
+            onClick={onNavigateToUpgrade}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3"
+          >
+            Chọn gói ngay
+          </Button>
+          <Button variant="outline" onClick={onBack} className="w-full">
+            Quay lại
+          </Button>
         </div>
       </div>
     );

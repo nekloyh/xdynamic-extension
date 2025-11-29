@@ -4,27 +4,9 @@ import BillOverviewScreen from "./screens/BillOverviewScreen";
 import PaymentScreen from "./screens/PaymentScreen";
 import PaymentConfirmationScreen from "./screens/PaymentConfirmationScreen";
 
+import { paymentService, Bill, PaymentData } from "../services/payment.service";
+
 type PaymentStep = "overview" | "payment" | "confirmation";
-
-interface Bill {
-  id: string;
-  amount: number;
-  currency: string;
-  dueDate: string;
-  status: "paid" | "unpaid" | "overdue";
-  description: string;
-  plan: string;
-}
-
-interface PaymentData {
-  transactionId: string;
-  method: string;
-  amount: number;
-  currency: string;
-  timestamp: string;
-  bill: Bill;
-  paymentData: any;
-}
 
 const PaymentApp: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<PaymentStep>("overview");
@@ -33,24 +15,28 @@ const PaymentApp: React.FC = () => {
 
   // Check URL parameters for direct navigation
   React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get("mode");
-    
-    if (mode === "upgrade") {
-      // Create a mock upgrade bill
-      const upgradeBill: Bill = {
-        id: "upgrade-001",
-        amount: 150000,
-        currency: "đ",
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-        status: "unpaid",
-        description: "Nâng cấp lên Dynamic Premium",
-        plan: "Dynamic Premium",
-      };
+    const init = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get("mode");
       
-      setSelectedBill(upgradeBill);
-      setCurrentStep("payment");
-    }
+      if (mode === "upgrade") {
+        try {
+          // Fetch unpaid bills or create a specific upgrade bill context
+          // For now, we'll try to fetch bills and find an unpaid one
+          const bills = await paymentService.getBills();
+          const unpaidBill = bills.find(b => b.status === 'unpaid');
+          
+          if (unpaidBill) {
+            setSelectedBill(unpaidBill);
+            setCurrentStep("payment");
+          }
+        } catch (error) {
+          logger.error("Failed to initialize payment flow:", error);
+        }
+      }
+    };
+    
+    init();
   }, []);
 
   const handleSelectBill = (bill: Bill) => {
@@ -62,9 +48,10 @@ const PaymentApp: React.FC = () => {
     setPaymentResult(paymentData);
     setCurrentStep("confirmation");
     
-    // Update bill status (in real app, this would be handled by backend)
+    // Update bill status locally if needed, but the confirmation screen usually handles display
     if (selectedBill) {
-      selectedBill.status = "paid";
+      // In a real app, we might re-fetch bills or update the local state to reflect the change
+      // selectedBill.status = "paid"; 
     }
   };
 

@@ -8,6 +8,7 @@ interface AccountTabProps {
   onChangePassword: (oldPassword: string, newPassword: string) => void;
   onSavePrivacy: (settings: PrivacySettings) => void;
   onDeleteAccount: () => void;
+  privacySettings: PrivacySettings;
 }
 
 const AccountTab: React.FC<AccountTabProps> = ({
@@ -15,6 +16,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   onChangePassword,
   onSavePrivacy,
   onDeleteAccount,
+  privacySettings,
 }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -25,12 +27,12 @@ const AccountTab: React.FC<AccountTabProps> = ({
     confirmPassword: "",
   });
 
-  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
-    dataSharing: true,
-    analytics: false,
-    crashReports: true,
-    personalizedAds: false,
-  });
+  const [localPrivacySettings, setLocalPrivacySettings] = useState<PrivacySettings>(privacySettings);
+
+  // Update local state when props change
+  React.useEffect(() => {
+    setLocalPrivacySettings(privacySettings);
+  }, [privacySettings]);
 
   const [linkedAccounts] = useState([
     { provider: "Google", connected: true, email: "user@gmail.com" },
@@ -54,7 +56,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   };
 
   const handlePrivacySave = () => {
-    onSavePrivacy(privacySettings);
+    onSavePrivacy(localPrivacySettings);
   };
 
   const handleDeleteAccount = () => {
@@ -104,10 +106,13 @@ const AccountTab: React.FC<AccountTabProps> = ({
     }
   };
 
+  const surface = "bg-white/90 dark:bg-slate-900/70 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800/70 backdrop-blur";
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8" role="tabpanel" id="tabpanel-account" aria-labelledby="tab-account">
+
       {/* Billing Management */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <div className={`${surface} p-6 mb-6`}>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
           <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -131,7 +136,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       </div>
 
       {/* Password Management */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <div className={`${surface} p-6 mb-6`}>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
           <svg className="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -150,7 +155,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       </div>
 
       {/* Linked Accounts */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <div className={`${surface} p-6 mb-6`}>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
           <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -190,7 +195,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       </div>
 
       {/* Privacy Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <div className={`${surface} p-6 mb-6`}>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
           <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -211,9 +216,9 @@ const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <input
               type="checkbox"
-              checked={privacySettings.dataSharing}
+              checked={localPrivacySettings.dataSharing}
               onChange={(e) =>
-                setPrivacySettings({ ...privacySettings, dataSharing: e.target.checked })
+                setLocalPrivacySettings({ ...localPrivacySettings, dataSharing: e.target.checked })
               }
               className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
             />
@@ -228,9 +233,9 @@ const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <input
               type="checkbox"
-              checked={privacySettings.analytics}
+              checked={localPrivacySettings.analytics}
               onChange={(e) =>
-                setPrivacySettings({ ...privacySettings, analytics: e.target.checked })
+                setLocalPrivacySettings({ ...localPrivacySettings, analytics: e.target.checked })
               }
               className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
             />
@@ -245,9 +250,9 @@ const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <input
               type="checkbox"
-              checked={privacySettings.crashReports}
+              checked={localPrivacySettings.crashReports}
               onChange={(e) =>
-                setPrivacySettings({ ...privacySettings, crashReports: e.target.checked })
+                setLocalPrivacySettings({ ...localPrivacySettings, crashReports: e.target.checked })
               }
               className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
             />
@@ -262,9 +267,9 @@ const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <input
               type="checkbox"
-              checked={privacySettings.personalizedAds}
+              checked={localPrivacySettings.personalizedAds}
               onChange={(e) =>
-                setPrivacySettings({ ...privacySettings, personalizedAds: e.target.checked })
+                setLocalPrivacySettings({ ...localPrivacySettings, personalizedAds: e.target.checked })
               }
               className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
             />
@@ -323,7 +328,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+          <div className={`${surface} shadow-2xl max-w-md w-full p-6`}>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
               Thay đổi mật khẩu
             </h3>

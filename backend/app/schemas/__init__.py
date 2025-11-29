@@ -2,6 +2,7 @@ from app.schemas.auth import *
 from app.schemas.payment import *
 from app.schemas.prediction import *
 from app.schemas.subscription import *
+from app.schemas.user import *
 
 __all__ = [
     "UserRegister",
@@ -16,7 +17,14 @@ __all__ = [
     "PredictionResponse",
     "SubscriptionResponse",
     "PurchasePlanRequest",
+    "ApiResponse",
+    "UserProfile",
+    "UserProfileUpdate",
+    "SecuritySettings",
+    "PrivacySettings",
+    "UserSettings",
+    "UserSettingsUpdate",
+    "UserStatistics",
 ]
-
 
 

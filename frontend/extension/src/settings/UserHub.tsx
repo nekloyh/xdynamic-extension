@@ -17,22 +17,27 @@ import {
   AdvancedSkeleton,
 } from "./components/SkeletonLoader";
 import { ConfirmationModal, Toast } from "../components/common";
-import {
-  DashboardMetrics,
-  PrivacySettings,
-  SecuritySettings,
-  UserProfile,
-} from "../types/common";
-import { DEFAULTS, logger, navigateToPage } from "../utils";
+import { UserProfile, DashboardMetrics, SecuritySettings, PrivacySettings, UserStatistics } from "../types/common";
+import { DEFAULTS, logger, navigateToPage, navigateToPageInCurrentTab } from "../utils";
+import { userService } from "../services/user.service";
+import { authService } from "../services/auth.service";
 
 type UserHubTab = "dashboard" | "overview" | "account" | "advanced";
+const ACTIVE_TAB_STORAGE_KEY = "xdynamic-userhub-tab";
 
 const UserHub: React.FC = () => {
   // Initialize active tab from URL hash or default to "dashboard"
   const getInitialTab = (): UserHubTab => {
-    const hash = window.location.hash.slice(1); // Remove '#'
     const validTabs = ['dashboard', 'overview', 'account', 'advanced'];
-    return validTabs.includes(hash) ? (hash as UserHubTab) : 'dashboard';
+    try {
+      const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+      if (saved && validTabs.includes(saved)) {
+        return saved as UserHubTab;
+      }
+    } catch {
+      // ignore storage errors and fall back to default
+    }
+    return 'dashboard';
   };
 
   const [activeTab, setActiveTab] = useState<UserHubTab>(getInitialTab());
@@ -58,24 +63,14 @@ const UserHub: React.FC = () => {
     importing: false,
   });
 
-  // Update URL hash when tab changes
+  // Persist last tab locally so it re-opens without hash fragments
   useEffect(() => {
-    window.location.hash = activeTab;
+    try {
+      localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+    } catch {
+      // ignore storage errors
+    }
   }, [activeTab]);
-
-  // Listen for hash changes (browser back/forward)
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      const validTabs = ['dashboard', 'overview', 'account', 'advanced'];
-      if (validTabs.includes(hash)) {
-        setActiveTab(hash as UserHubTab);
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
 
   // Simulate initial loading
   useEffect(() => {
@@ -98,23 +93,34 @@ const UserHub: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Mock user profile
+  // User profile state
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: "user-123",
-    fullName: "Mai Nguyễn",
-    email: "mai.nguyen@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mai",
-    plan: "Premium+",
-    planType: "pro",
+    id: "",
+    fullName: "",
+    email: "",
+    avatar: "",
+    plan: "Free",
+    planType: "free",
   });
 
-  // Mock dashboard metrics
+  // Load initial email from storage if available
+  useEffect(() => {
+    const loadStoredEmail = async () => {
+      const email = await authService.getUserEmail();
+      if (email && !userProfile.email) {
+        setUserProfile(prev => ({ ...prev, email }));
+      }
+    };
+    loadStoredEmail();
+  }, []);
+
+  // Dashboard metrics state
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics>({
-    usagePercentage: 70,
-    usedGB: 7.0,
+    usagePercentage: 0,
+    usedGB: 0,
     totalGB: DEFAULTS.USAGE_LIMIT_GB,
-    blockedToday: DEFAULTS.BLOCKED_TODAY,
-    protectionStatus: DEFAULTS.PROTECTION_ENABLED ? "on" : "off",
+    blockedToday: 0,
+    protectionStatus: "off",
     autoUpdate: DEFAULTS.AUTO_UPDATE_ENABLED,
     speedLimit: DEFAULTS.SPEED_LIMIT,
   });
@@ -127,6 +133,79 @@ const UserHub: React.FC = () => {
     customFilters: [],
     vpnEnabled: false,
   });
+
+  // Privacy settings state
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
+    dataSharing: true,
+    analytics: false,
+    crashReports: true,
+    personalizedAds: false,
+  });
+
+  const [userStats, setUserStats] = useState<UserStatistics>({
+    totalBlocked: 0,
+    todayBlocked: 0,
+    weeklyBlocked: 0,
+    monthlyBlocked: 0,
+    byCategory: { sensitive: 0, violence: 0, toxicity: 0, vice: 0 }
+  });
+
+  // Fetch data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsInitialLoading(true);
+      try {
+        const [profile, settings, stats] = await Promise.all([
+          userService.getProfile(),
+          userService.getSettings(),
+          userService.getStatistics()
+        ]);
+
+        console.log("Fetched profile:", profile);
+        setUserProfile(profile);
+        
+        if (settings.security) {
+          setSecuritySettings(settings.security);
+        }
+        
+        if (settings.privacy) {
+          setPrivacySettings(settings.privacy);
+        }
+
+        // Map stats to dashboardMetrics
+        setUserStats(stats);
+        setDashboardMetrics(prev => ({
+          ...prev,
+          blockedToday: stats.todayBlocked,
+          // Other metrics might need separate endpoints or calculation
+        }));
+
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        logger.error("Failed to fetch user data:", error);
+        showToast("Không thể tải dữ liệu người dùng. Vui lòng thử lại.", "error");
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleRefreshStats = async () => {
+    try {
+      const stats = await userService.getStatistics();
+      setUserStats(stats);
+      setDashboardMetrics(prev => ({
+        ...prev,
+        blockedToday: stats.todayBlocked,
+      }));
+      showToast("Dữ liệu đã được cập nhật", "success");
+    } catch (error) {
+      logger.error("Failed to refresh stats:", error);
+      showToast("Không thể cập nhật dữ liệu", "error");
+    }
+  };
 
   const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
     setToast({ isVisible: true, message, type });
@@ -160,33 +239,49 @@ const UserHub: React.FC = () => {
     setShowEditProfileModal(true);
   };
 
-  const handleSaveProfile = (updatedProfile: Partial<UserProfile>) => {
-    setUserProfile(prev => ({ ...prev, ...updatedProfile }));
-    setShowEditProfileModal(false);
-    showToast("Hồ sơ đã được cập nhật thành công!", "success");
-    logger.info("Profile updated:", updatedProfile);
+  const handleSaveProfile = async (updatedProfile: Partial<UserProfile>) => {
+    setIsLoading(prev => ({ ...prev, saving: true }));
+    try {
+      const newProfile = await userService.updateProfile(updatedProfile);
+      setUserProfile(newProfile);
+      setShowEditProfileModal(false);
+      showToast("Hồ sơ đã được cập nhật thành công!", "success");
+      logger.info("Profile updated:", newProfile);
+    } catch (error) {
+      logger.error("Failed to update profile:", error);
+      showToast("Có lỗi xảy ra khi cập nhật hồ sơ.", "error");
+    } finally {
+      setIsLoading(prev => ({ ...prev, saving: false }));
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logger.info("User logging out");
-    // Clear authentication data and redirect to login
-    navigateToPage('LOGIN');
+    try {
+      await authService.logout();
+      navigateToPage('LOGIN');
+    } catch (error) {
+      logger.error("Logout failed:", error);
+      // Force redirect even if logout API fails
+      navigateToPage('LOGIN');
+    }
   };
 
   const handleUpgrade = () => {
     logger.info("User initiating upgrade from settings");
-    console.log("🚀 [UPGRADE] Starting upgrade flow...");
-    console.log("🚀 [UPGRADE] Target page:", 'PLAN');
-    console.log("🚀 [UPGRADE] Expected URL:", chrome.runtime.getURL('src/plan/index.html'));
+    console.log("[UPGRADE] Starting upgrade flow...");
+    console.log("[UPGRADE] Target page:", "PLAN");
+    console.log("[UPGRADE] Expected URL:", chrome.runtime.getURL("src/plan/index.html"));
     
     // Show upgrade benefits toast before redirecting
-    showToast("Khám phá các tính năng Premium! 🚀", "info");
+    showToast("Khám phá các tính năng Premium!", "info");
     
-    // Add small delay for UX smoothness
+    // Prefer same-tab navigation for reliability; fallback to new tab.
     setTimeout(() => {
-      console.log("🚀 [UPGRADE] Navigating to PLAN page...");
-      navigateToPage('PLAN');
-    }, 500);
+      console.log("[UPGRADE] Navigating to PLAN page (current tab)...");
+      navigateToPageInCurrentTab("PLAN");
+      setTimeout(() => navigateToPage("PLAN"), 200);
+    }, 300);
   };
 
   const handleViewDetails = () => {
@@ -194,20 +289,47 @@ const UserHub: React.FC = () => {
     setActiveTab('dashboard');
   };
 
-  const handleToggleProtection = (enabled: boolean) => {
-    setDashboardMetrics({ ...dashboardMetrics, protectionStatus: enabled ? "on" : "off" });
-    logger.info("Protection toggled:", enabled);
+  const handleToggleProtection = async (enabled: boolean) => {
+    // Optimistic update
+    setDashboardMetrics(prev => ({ ...prev, protectionStatus: enabled ? "on" : "off" }));
+    setSecuritySettings(prev => ({ ...prev, realTimeProtection: enabled }));
+    
+    try {
+      await userService.updateSettings({ security: { ...securitySettings, realTimeProtection: enabled } });
+      logger.info("Protection toggled:", enabled);
+      showToast(`Đã ${enabled ? "bật" : "tắt"} bảo vệ thời gian thực`, "success");
+    } catch (error) {
+      logger.error("Failed to toggle protection:", error);
+      // Revert on failure
+      setDashboardMetrics(prev => ({ ...prev, protectionStatus: !enabled ? "on" : "off" }));
+      setSecuritySettings(prev => ({ ...prev, realTimeProtection: !enabled }));
+      showToast("Không thể thay đổi trạng thái bảo vệ. Vui lòng thử lại.", "error");
+    }
   };
 
-  const handleToggleAutoUpdate = (enabled: boolean) => {
-    setDashboardMetrics({ ...dashboardMetrics, autoUpdate: enabled });
-    logger.info("Auto-update toggled:", enabled);
+  const handleToggleAutoUpdate = async (enabled: boolean) => {
+    // Optimistic update
+    setDashboardMetrics(prev => ({ ...prev, autoUpdate: enabled }));
+    setSecuritySettings(prev => ({ ...prev, autoUpdate: enabled }));
+
+    try {
+      await userService.updateSettings({ security: { ...securitySettings, autoUpdate: enabled } });
+      logger.info("Auto-update toggled:", enabled);
+      showToast(`Đã ${enabled ? "bật" : "tắt"} tự động cập nhật`, "success");
+    } catch (error) {
+      logger.error("Failed to toggle auto-update:", error);
+      // Revert on failure
+      setDashboardMetrics(prev => ({ ...prev, autoUpdate: !enabled }));
+      setSecuritySettings(prev => ({ ...prev, autoUpdate: !enabled }));
+      showToast("Không thể thay đổi cài đặt cập nhật. Vui lòng thử lại.", "error");
+    }
   };
 
   const handleSaveSecuritySettings = async (settings: SecuritySettings) => {
     setIsLoading(prev => ({ ...prev, saving: true }));
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      await userService.updateSettings({ security: settings });
+      
       logger.info("Saving security settings:", settings);
       setSecuritySettings(settings);
       showToast("Cài đặt bảo mật đã được lưu thành công!", "success");
@@ -369,9 +491,19 @@ const UserHub: React.FC = () => {
     showToast("Mật khẩu đã được thay đổi thành công!", "success");
   };
 
-  const handleSavePrivacy = (settings: PrivacySettings) => {
-    logger.info("Saving privacy settings:", settings);
-    showToast("Cài đặt riêng tư đã được lưu!", "success");
+  const handleSavePrivacy = async (settings: PrivacySettings) => {
+    setIsLoading(prev => ({ ...prev, saving: true }));
+    try {
+      await userService.updateSettings({ privacy: settings });
+      setPrivacySettings(settings);
+      logger.info("Saving privacy settings:", settings);
+      showToast("Cài đặt riêng tư đã được lưu!", "success");
+    } catch (error) {
+      logger.error("Failed to save privacy settings:", error);
+      showToast("Có lỗi xảy ra khi lưu cài đặt.", "error");
+    } finally {
+      setIsLoading(prev => ({ ...prev, saving: false }));
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -402,7 +534,7 @@ const UserHub: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
       {/* Sidebar Navigation */}
       <SettingsSidebar
         activeSection={activeTab}
@@ -414,14 +546,18 @@ const UserHub: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Header with Profile & Search */}
-        <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm">
+        <header className="sticky top-0 z-40 backdrop-blur bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800/60">
           {/* Profile Section */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-700 px-4 sm:px-6 py-6">
-            <div className="max-w-6xl mx-auto">
+          <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-blue-900 text-slate-50 px-4 sm:px-6 py-6">
+            <div className="absolute inset-0 opacity-30">
+              <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-blue-500 blur-3xl" />
+              <div className="absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-cyan-400 blur-3xl" />
+            </div>
+            <div className="relative max-w-6xl mx-auto">
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="lg:hidden mb-4 p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors"
+                className="lg:hidden mb-4 p-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white rounded-lg transition-colors"
                 aria-label="Mở menu"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -433,7 +569,7 @@ const UserHub: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                   {/* Avatar */}
                   <div className="relative group">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white p-1 shadow-lg">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 border border-white/10 p-1 shadow-lg">
                       {userProfile.avatar ? (
                         <img
                           src={userProfile.avatar}
@@ -441,14 +577,14 @@ const UserHub: React.FC = () => {
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
                           {userProfile.fullName.charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
                     <button
                       onClick={handleEditProfile}
-                      className="absolute bottom-0 right-0 w-6 h-6 sm:w-7 sm:h-7 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute bottom-0 right-0 w-6 h-6 sm:w-7 sm:h-7 bg-white text-blue-700 border border-white/60 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
                       aria-label="Chỉnh sửa avatar"
                     >
                       <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -463,7 +599,7 @@ const UserHub: React.FC = () => {
                       <h2 className="text-xl sm:text-2xl font-bold">{userProfile.fullName}</h2>
                       <button
                         onClick={handleEditProfile}
-                        className="p-1 hover:bg-white/20 rounded transition-colors"
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
                         aria-label="Chỉnh sửa hồ sơ"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -472,7 +608,7 @@ const UserHub: React.FC = () => {
                       </button>
                     </div>
                     <p className="text-blue-100 mb-2 text-sm sm:text-base break-all sm:break-normal">{userProfile.email}</p>
-                    <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500 to-purple-700 text-white">
+                    <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-white/10 border border-white/15 text-white backdrop-blur">
                       {userProfile.plan}
                     </span>
                   </div>
@@ -482,7 +618,7 @@ const UserHub: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                   <button
                     onClick={handleUpgrade}
-                    className="w-full sm:w-auto px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
+                    className="w-full sm:w-auto px-4 py-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base shadow-sm"
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -491,7 +627,7 @@ const UserHub: React.FC = () => {
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="w-full sm:w-auto px-4 py-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
+                    className="w-full sm:w-auto px-4 py-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -536,7 +672,10 @@ const UserHub: React.FC = () => {
               {activeTab === "dashboard" && (
                 <DashboardTab
                   metrics={dashboardMetrics}
+                  stats={userStats}
+                  userProfile={userProfile}
                   onUpgrade={handleUpgrade}
+                  onRefresh={handleRefreshStats}
                   onToggleProtection={handleToggleProtection}
                   onToggleAutoUpdate={handleToggleAutoUpdate}
                 />
@@ -555,6 +694,9 @@ const UserHub: React.FC = () => {
                   onExportSettings={handleExportSettings}
                   onImportSettings={handleImportSettings}
                   isLoading={isLoading}
+                  customFilters={securitySettings.customFilters}
+                  vpnEnabled={securitySettings.vpnEnabled}
+                  onUpdateSecurity={(updates) => handleSaveSecuritySettings({ ...securitySettings, ...updates })}
                 />
               )}
               {activeTab === "account" && (
@@ -563,6 +705,7 @@ const UserHub: React.FC = () => {
                   onChangePassword={handleChangePassword}
                   onSavePrivacy={handleSavePrivacy}
                   onDeleteAccount={handleDeleteAccount}
+                  privacySettings={privacySettings}
                 />
               )}
             </>

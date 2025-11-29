@@ -52,7 +52,7 @@ export default defineManifest({
   },
 
   options_ui: {
-    page: "src/settings/index.html",
+    page: "src/dashboard/index.html",
     open_in_tab: true,
   },
 
@@ -62,6 +62,13 @@ export default defineManifest({
         "icons/*.png",
         "assets/*.css",
         "assets/*.js",
+        "src/plan/index.html",
+        "src/settings/index.html",
+        "src/dashboard/index.html",
+        "src/payment/index.html",
+        "src/report/index.html",
+        "src/onboarding/index.html",
+        "src/login/index.html",
       ],
       matches: ["<all_urls>"],
     },

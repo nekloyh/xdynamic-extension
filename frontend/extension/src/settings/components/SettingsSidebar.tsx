@@ -68,6 +68,9 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     onCloseMobileMenu?.();
   };
 
+  const cardBase =
+    "bg-white/90 dark:bg-slate-900/85 border border-slate-200/80 dark:border-slate-800/80 shadow-sm backdrop-blur";
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -84,17 +87,16 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         className={`
           fixed lg:sticky top-0 left-0 z-50
           w-64 h-screen
-          bg-white dark:bg-gray-800
-          border-r border-gray-200 dark:border-gray-700
+          ${cardBase}
           transform transition-transform duration-300 ease-in-out
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0
           overflow-y-auto
         `}
         aria-label="Settings Navigation"
-      >
-        {/* Sidebar Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 p-4 border-b border-gray-200 dark:border-gray-700">
+        >
+          {/* Sidebar Header */}
+        <div className="sticky top-0 bg-white/90 dark:bg-slate-900/90 z-10 p-4 border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Cài đặt

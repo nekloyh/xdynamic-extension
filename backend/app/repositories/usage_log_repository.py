@@ -32,12 +32,14 @@ class UsageLogRepository:
             UsageLog.user_id == user_id,
             UsageLog.created_at >= start_date
         ).count()
+
+    def count_total(self, user_id: int) -> int:
+        return self.db.query(UsageLog).filter(UsageLog.user_id == user_id).count()
     
     def count_monthly_usage(self, user_id: int) -> int:
         """Count usage in current month"""
         now = datetime.utcnow()
         start_of_month = datetime(now.year, now.month, 1)
         return self.count_by_user_in_period(user_id, start_of_month)
-
 
 

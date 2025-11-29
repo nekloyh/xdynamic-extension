@@ -3,7 +3,8 @@ import PlansOverviewScreen from "./screens/PlansOverviewScreen";
 import UpgradeScreen from "./screens/UpgradeScreen";
 import PlanConfirmationScreen from "./screens/PlanConfirmationScreen";
 import { Plan } from "../types/common";
-import { redirectToPage, navigateToPage } from "../utils";
+import { redirectToPage, navigateToPage, logger } from "../utils";
+import { planService } from "../services/plan.service";
 
 type PlanStep = "overview" | "upgrade" | "confirmation";
 
@@ -33,10 +34,11 @@ const PlanApp: React.FC = () => {
     setCurrentStep("upgrade");
   };
 
-  const handleSelectPlan = (plan: Plan, promoCode?: string) => {
+  const handleSelectPlan = async (plan: Plan, promoCode?: string) => {
     // Calculate discount based on promo code
     let discount = 0;
     if (promoCode) {
+      // In a real app, validate promo code with backend
       if (promoCode.toUpperCase() === "SAVE20") {
         discount = 20;
       } else if (promoCode.toUpperCase() === "FIRST50") {
@@ -50,11 +52,8 @@ const PlanApp: React.FC = () => {
       discount,
     });
 
-    // In a real app, this would make an API call to process the upgrade
-    // For now, we'll just navigate to confirmation
-    setTimeout(() => {
-      setCurrentStep("confirmation");
-    }, 500);
+    // Navigate to confirmation
+    setCurrentStep("confirmation");
   };
 
   const handleBackToDashboard = () => {

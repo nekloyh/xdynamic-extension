@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { DashboardMetrics } from "../../types/common";
+import { DashboardMetrics, UserStatistics, UserProfile } from "../../types/common";
 import AnimatedCard from "./AnimatedCard";
 import ProgressRing from "./ProgressRing";
 import RippleButton from "./RippleButton";
 
 interface DashboardTabProps {
   metrics: DashboardMetrics;
+  stats: UserStatistics;
+  userProfile: UserProfile;
   onUpgrade: () => void;
+  onRefresh: () => Promise<void>;
   onToggleProtection: (enabled: boolean) => void;
   onToggleAutoUpdate: (enabled: boolean) => void;
 }
 
 const DashboardTab: React.FC<DashboardTabProps> = ({
   metrics,
+  stats,
+  userProfile,
   onUpgrade,
+  onRefresh,
   onToggleProtection,
   onToggleAutoUpdate,
 }) => {
@@ -21,8 +27,6 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
   const [realtimeData, setRealtimeData] = useState({
     currentSpeed: 45,
     avgSpeed: 42,
-    blockedThisHour: 8,
-    threatsBlocked: 156,
     uptime: "99.9%",
   });
 
@@ -32,8 +36,6 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
       setRealtimeData(prev => ({
         ...prev,
         currentSpeed: prev.currentSpeed + (Math.random() - 0.5) * 10,
-        blockedThisHour: prev.blockedThisHour + Math.floor(Math.random() * 2),
-        threatsBlocked: prev.threatsBlocked + Math.floor(Math.random() * 3),
       }));
     }, 30000);
 
@@ -42,13 +44,16 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setRealtimeData(prev => ({
-      ...prev,
-      currentSpeed: 45 + Math.random() * 20,
-      blockedThisHour: Math.floor(Math.random() * 20),
-    }));
-    setRefreshing(false);
+    try {
+      await onRefresh();
+      // Simulate network speed variation
+      setRealtimeData(prev => ({
+        ...prev,
+        currentSpeed: 45 + Math.random() * 20,
+      }));
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleToggleProtection = () => {
@@ -60,6 +65,11 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
     onToggleAutoUpdate(!metrics.autoUpdate);
   };
 
+  const surface =
+    "rounded-2xl border border-slate-200/80 dark:border-slate-800/70 bg-white/90 dark:bg-slate-900/70 shadow-sm backdrop-blur";
+  const softSurface =
+    "rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/80 dark:bg-slate-900/60 shadow-sm backdrop-blur";
+
   return (
     <div className="space-y-6" role="tabpanel" id="tabpanel-dashboard" aria-labelledby="tab-dashboard">
       {/* Welcome Section */}
@@ -67,7 +77,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Chào mừng bạn trở lại! 👋
+              Chào mừng, {userProfile.fullName || userProfile.email || "Người dùng"}! 👋
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
               Hệ thống bảo vệ đang hoạt động {metrics.protectionStatus === "on" ? "tốt" : "tạm dừng"}
@@ -100,7 +110,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
       {/* Quick Stats Grid with Progress Rings */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Data Usage with Progress Ring */}
-        <AnimatedCard delay={100} hover className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <AnimatedCard delay={100} hover className={`${surface} p-6`}>
           <div className="flex flex-col items-center">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Dung lượng sử dụng</h3>
             <ProgressRing 
@@ -115,7 +125,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
         </AnimatedCard>
 
         {/* Protection Status */}
-        <AnimatedCard delay={200} hover className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <AnimatedCard delay={200} hover className={`${surface} p-6`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái bảo vệ</h3>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -161,7 +171,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
         </AnimatedCard>
 
         {/* Blocked Today */}
-        <AnimatedCard delay={300} hover className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <AnimatedCard delay={300} hover className={`${surface} p-6`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Đã chặn hôm nay</h3>
             <div className="w-8 h-8 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
@@ -177,13 +187,13 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              <span>+{realtimeData.blockedThisHour} giờ qua</span>
+              <span>+{stats.todayBlocked} hôm nay</span>
             </div>
           </div>
         </AnimatedCard>
 
         {/* Speed Monitor */}
-        <AnimatedCard delay={400} hover className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <AnimatedCard delay={400} hover className={`${surface} p-6`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tốc độ mạng</h3>
             <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
@@ -213,7 +223,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
         {/* Left Column - Protection Overview */}
         <div className="lg:col-span-2 space-y-6">
           {/* Protection Settings Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className={`${surface} p-6`}>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
               <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -282,7 +292,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className={`${surface} p-6`}>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
               <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -321,7 +331,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
         {/* Right Column - Quick Actions & Stats */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className={`${surface} p-6`}>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Thao tác nhanh</h3>
             
             {/* Premium Benefits Card */}
@@ -391,13 +401,13 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
           </div>
 
           {/* Extended Stats */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className={`${surface} p-6`}>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Thống kê chi tiết</h3>
             
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Tổng mối đe dọa đã chặn</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{realtimeData.threatsBlocked}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{stats.totalBlocked}</span>
               </div>
               
               <div className="flex justify-between items-center">

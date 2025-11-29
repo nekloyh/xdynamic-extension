@@ -166,3 +166,16 @@ export interface ActivityLog {
   message: string;
   details?: string;
 }
+
+export interface UserStatistics {
+  totalBlocked: number;
+  todayBlocked: number;
+  weeklyBlocked: number;
+  monthlyBlocked: number;
+  byCategory: {
+    sensitive: number;
+    violence: number;
+    toxicity: number;
+    vice: number;
+  };
+}

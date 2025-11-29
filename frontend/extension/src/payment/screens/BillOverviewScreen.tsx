@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../../components/ui";
 
-interface Bill {
-  id: string;
-  amount: number;
-  currency: string;
-  dueDate: string;
-  status: "paid" | "unpaid" | "overdue";
-  description: string;
-  plan: string;
-}
+import { paymentService, Bill } from "../../services/payment.service";
+import { logger } from "../../utils";
 
 interface BillOverviewScreenProps {
   onSelectBill: (bill: Bill) => void;
@@ -24,52 +17,20 @@ const BillOverviewScreen: React.FC<BillOverviewScreenProps> = ({
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid" | "overdue">("all");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock bills data
+  // Fetch bills data
   useEffect(() => {
-    const mockBills: Bill[] = [
-      {
-        id: "bill-001",
-        amount: 100000,
-        currency: "đ",
-        dueDate: "2025-11-15",
-        status: "unpaid",
-        description: "Hóa đơn tháng 11/2025",
-        plan: "Dynamic Pro",
-      },
-      {
-        id: "bill-002",
-        amount: 100000,
-        currency: "đ",
-        dueDate: "2025-10-15",
-        status: "paid",
-        description: "Hóa đơn tháng 10/2025",
-        plan: "Dynamic Pro",
-      },
-      {
-        id: "bill-003",
-        amount: 80000,
-        currency: "đ",
-        dueDate: "2025-09-15",
-        status: "paid",
-        description: "Hóa đơn tháng 9/2025",
-        plan: "Dynamic Basic",
-      },
-      {
-        id: "bill-004",
-        amount: 50000,
-        currency: "đ",
-        dueDate: "2025-08-15",
-        status: "overdue",
-        description: "Hóa đơn tháng 8/2025",
-        plan: "Dynamic Basic",
-      },
-    ];
+    const fetchBills = async () => {
+      try {
+        const data = await paymentService.getBills();
+        setBills(data);
+      } catch (error) {
+        logger.error("Failed to fetch bills:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    // Simulate API call
-    setTimeout(() => {
-      setBills(mockBills);
-      setIsLoading(false);
-    }, 1000);
+    fetchBills();
   }, []);
 
   const getFilteredBills = () => {

@@ -21,6 +21,6 @@ class User(Base):
     subscriptions = relationship("Subscription", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")
     usage_logs = relationship("UsageLog", back_populates="user")
-
+    settings = relationship("UserSettings", back_populates="user", uselist=False)
 
 

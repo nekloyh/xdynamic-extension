@@ -45,10 +45,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     setHasChanges(false);
   };
 
+  const surface = "bg-white/90 dark:bg-slate-900/70 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800/70 backdrop-blur";
+  const softSurface = "bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 rounded-2xl shadow-sm backdrop-blur";
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8" role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview">
       {/* Security Settings Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <div className={`${surface} p-6 mb-6`}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
             <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +69,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         {/* Settings List */}
         <div className="space-y-6">
           {/* Real-time Protection */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+          <div className={`flex items-center justify-between p-4 ${softSurface} hover:bg-slate-50/95 dark:hover:bg-slate-900/70 transition-colors`}>
             <div className="flex-1">
               <div className="flex items-center mb-1">
                 <svg className="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -99,7 +102,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
 
           {/* Auto Update */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+          <div className={`flex items-center justify-between p-4 ${softSurface} hover:bg-slate-50/95 dark:hover:bg-slate-900/70 transition-colors`}>
             <div className="flex-1">
               <div className="flex items-center mb-1">
                 <svg className="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
@@ -129,7 +132,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
 
           {/* Speed Limit Slider */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className={`p-4 ${softSurface}`}>
             <div className="flex items-center mb-3">
               <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
@@ -176,7 +179,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-600 gap-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t border-slate-200/70 dark:border-slate-800/70 gap-3">
           <div className="flex space-x-3">
             <button
               onClick={onViewLogs}

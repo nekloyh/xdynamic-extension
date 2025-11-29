@@ -175,6 +175,14 @@ export class AuthService {
   }
 
   /**
+   * Get user email from storage
+   */
+  async getUserEmail(): Promise<string | null> {
+    const email = await readFromStorage<string>(STORAGE_KEYS.USER_EMAIL);
+    return email ?? null;
+  }
+
+  /**
    * Check if user is authenticated
    */
   async isAuthenticated(): Promise<boolean> {
