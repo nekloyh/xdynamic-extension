@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.usage_log import UsageLog
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 
 
@@ -8,14 +8,22 @@ class UsageLogRepository:
     def __init__(self, db: Session):
         self.db = db
     
-    def create(self, user_id: int, endpoint: str, method: str, 
-               status_code: int = None, response_time_ms: float = None) -> UsageLog:
+    def create(
+        self,
+        user_id: int,
+        endpoint: str,
+        method: str,
+        status_code: int = None,
+        response_time_ms: float = None,
+        meta_data: Optional[str] = None,
+    ) -> UsageLog:
         log = UsageLog(
             user_id=user_id,
             endpoint=endpoint,
             method=method,
             status_code=status_code,
-            response_time_ms=response_time_ms
+            response_time_ms=response_time_ms,
+            meta_data=meta_data,
         )
         self.db.add(log)
         self.db.commit()
@@ -41,5 +49,4 @@ class UsageLogRepository:
         now = datetime.utcnow()
         start_of_month = datetime(now.year, now.month, 1)
         return self.count_by_user_in_period(user_id, start_of_month)
-
 
