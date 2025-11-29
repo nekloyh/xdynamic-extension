@@ -22,6 +22,8 @@ const scanConfig: ScanConfig = {
   scanDelay: 500,
 };
 
+let isPageBlocked = false;
+
 const isExtensionContextValid = (): boolean => {
   try {
     return Boolean(chrome?.runtime?.id);
@@ -68,6 +70,151 @@ const ensureValidContext = (): boolean => {
     "Extension was reloaded. Please refresh this page (F5) for content script to work."
   );
   showReloadBanner();
+  return false;
+};
+
+const normalizePattern = (pattern: string): string => {
+  const trimmed = (pattern || "").trim();
+  if (!trimmed) return "";
+
+  const withProtocol = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(withProtocol);
+    return parsed.hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return trimmed
+      .replace(/^https?:\/\//, "")
+      .split("/")[0]
+      .replace(/^www\./, "")
+      .toLowerCase();
+  }
+};
+
+const matchesPattern = (hostname: string, _fullUrl: string, pattern: string): boolean => {
+  const normalizedPattern = normalizePattern(pattern);
+  if (!normalizedPattern) return false;
+
+  if (normalizedPattern.startsWith("*.")) {
+    const base = normalizedPattern.slice(2);
+    return hostname === base || hostname.endsWith(`.${base}`);
+  }
+
+  return hostname === normalizedPattern;
+};
+
+const getBlacklist = async (): Promise<string[]> => {
+  try {
+    const list = await readFromStorage<string[]>(STORAGE_KEYS.BLACKLIST, "sync");
+    if (Array.isArray(list)) {
+      return list.filter(Boolean);
+    }
+  } catch (error) {
+    logger.warn("Failed to read blacklist from storage", error);
+  }
+  return [];
+};
+
+const applyBlacklistOverlay = (pattern: string): void => {
+  const existing = document.getElementById("xdynamic-blacklist-overlay");
+  if (existing) {
+    return;
+  }
+
+  const attachOverlay = () => {
+    const overlay = document.createElement("div");
+    overlay.id = "xdynamic-blacklist-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.15), rgba(15, 23, 42, 0.95)),
+                  radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.2), rgba(15, 23, 42, 0.9));
+      color: #e2e8f0;
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 32px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      backdrop-filter: blur(6px);
+    `;
+
+    const card = document.createElement("div");
+    card.style.cssText = `
+      max-width: 520px;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 15px 60px rgba(0,0,0,0.35);
+    `;
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+        <div style="width:52px; height:52px; border-radius:16px; background:#ef4444; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(239,68,68,0.35);">
+          <span style="font-size:26px;" aria-hidden="true">🚫</span>
+        </div>
+      </div>
+      <h2 style="font-size:22px; font-weight:800; margin:0 0 12px;">Trang này đã bị chặn</h2>
+      <p style="margin:0 0 8px; color:#cbd5e1; font-size:15px;">Domain hiện tại khớp với blacklist của bạn.</p>
+      <p style="margin:0 0 16px; color:#e2e8f0; font-weight:600;">Mẫu chặn: <code style="background:#0f172a; padding:4px 8px; border-radius:8px; border:1px solid rgba(148, 163, 184, 0.25);">${pattern}</code></p>
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
+        <button id="xdynamic-leave-btn" style="padding:10px 16px; border-radius:10px; background:#ef4444; color:#fff; border:none; font-weight:700; cursor:pointer; box-shadow:0 10px 20px rgba(239,68,68,0.35);">
+          Rời khỏi trang
+        </button>
+        <button id="xdynamic-settings-btn" style="padding:10px 16px; border-radius:10px; background:rgba(148, 163, 184, 0.15); color:#e2e8f0; border:1px solid rgba(148, 163, 184, 0.35); font-weight:700; cursor:pointer;">
+          Mở cài đặt (giữ nguyên chặn)
+        </button>
+      </div>
+    `;
+
+    overlay.appendChild(card);
+    document.body?.appendChild(overlay);
+    document.documentElement.style.overflow = "hidden";
+
+    const leaveBtn = document.getElementById("xdynamic-leave-btn");
+    leaveBtn?.addEventListener("click", () => {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.replace("about:blank");
+      }
+    });
+
+    const settingsBtn = document.getElementById("xdynamic-settings-btn");
+    settingsBtn?.addEventListener("click", () => {
+      try {
+        chrome.runtime?.openOptionsPage?.();
+      } catch (error) {
+        logger.error("Failed to open options page:", error);
+      }
+    });
+  };
+
+  if (document.body) {
+    attachOverlay();
+  } else {
+    document.addEventListener("DOMContentLoaded", attachOverlay, { once: true });
+  }
+};
+
+const checkAndBlockCurrentPage = async (): Promise<boolean> => {
+  if (location.protocol === "chrome-extension:") return false;
+  const hostname = window.location.hostname.toLowerCase();
+  const fullUrl = window.location.href.toLowerCase();
+  const blacklist = await getBlacklist();
+
+  const matchedPattern = blacklist.find((pattern) => matchesPattern(hostname, fullUrl, pattern));
+  if (matchedPattern) {
+    isPageBlocked = true;
+    currentBlockedPattern = matchedPattern;
+    applyBlacklistOverlay(matchedPattern);
+    logger.warn("Page blocked by blacklist", { hostname, matchedPattern });
+    return true;
+  }
+
   return false;
 };
 
@@ -181,14 +328,17 @@ const scanPage = async (): Promise<void> => {
     return;
   }
 
-  const enabled = await isExtensionEnabled();
-  const authenticated = await isUserAuthenticated();
+  if (await checkAndBlockCurrentPage()) {
+    return;
+  }
 
+  const enabled = await isExtensionEnabled();
   if (!enabled) {
     logger.info("Extension is disabled");
     return;
   }
 
+  const authenticated = await isUserAuthenticated();
   if (!authenticated) {
     logger.warn("User not authenticated - skipping scan");
     return;
@@ -229,6 +379,8 @@ const observeDOMChanges = (): void => {
       observer.disconnect();
       return;
     }
+
+    if (isPageBlocked) return;
 
     const enabled = await isExtensionEnabled();
     const authenticated = await isUserAuthenticated();
@@ -289,6 +441,13 @@ const handleRuntimeMessage = (
 };
 
 addRuntimeMessageListener(handleRuntimeMessage);
+
+chrome.storage?.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "sync" && areaName !== "local") return;
+  if (changes[STORAGE_KEYS.BLACKLIST] && !isPageBlocked) {
+    checkAndBlockCurrentPage();
+  }
+});
 
 const initialize = (): void => {
   if (document.readyState === "loading") {

@@ -24,6 +24,8 @@ class UserService:
         "autoUpdate": False,
         "speedLimit": 80,
         "customFilters": [],
+        "whitelist": [],
+        "blacklist": [],
         "vpnEnabled": False,
     }
     DEFAULT_PRIVACY: Dict[str, object] = {

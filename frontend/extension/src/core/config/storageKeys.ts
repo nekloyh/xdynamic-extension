@@ -8,6 +8,8 @@ export const STORAGE_KEYS = {
   EXTENSION_ENABLED: "extensionEnabled",
   FILTERS: "filters",
   CONTENT_TYPES: "contentTypes",
+  WHITELIST: "whitelist",
+  BLACKLIST: "blacklist",
   TOTAL_BLOCKED: "totalBlocked",
   TODAY_BLOCKED: "todayBlocked",
   WEEKLY_BLOCKED: "weeklyBlocked",
