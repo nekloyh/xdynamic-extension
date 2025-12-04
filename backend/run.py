@@ -5,6 +5,7 @@ Script chạy server FastAPI
 Sử dụng: python run.py [options]
 """
 import sys
+import os
 import argparse
 import uvicorn
 from pathlib import Path
@@ -53,6 +54,22 @@ def check_environment():
 
     # Check .env file
     env_file = BACKEND_ROOT / ".env"
+    env_test_file = BACKEND_ROOT / ".env.test"
+    env_production_file = BACKEND_ROOT / ".env.production"
+    
+    # Determine which .env file is being used
+    loaded_env = "UNKNOWN"
+    if "APP_NAME" in settings.__dict__:
+        app_name = settings.APP_NAME
+        if "(TEST)" in app_name:
+            loaded_env = ".env.test"
+        elif "production" in app_name.lower() or settings.DEBUG is False:
+            loaded_env = ".env.production"
+        else:
+            loaded_env = ".env"
+    
+    print(f"[OK] Loaded config from: {loaded_env}")
+    
     if not env_file.exists():
         print("[WARNING] .env is missing!")
         print("   Copy .env.example to .env and fill in your values:")
@@ -117,12 +134,23 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ví dụ:
-  python run.py                    # Chạy với cấu hình mặc định
-  python run.py --port 3000        # Chạy trên port 3000
-  python run.py --reload           # Chạy với auto-reload (dev mode)
-  python run.py --host 0.0.0.0     # Cho phép truy cập từ bên ngoài
-  python run.py --workers 4        # Chạy với 4 workers (production)
+  python run.py                           # Chạy LOCAL dev (.env)
+  python run.py --env test                # Chạy TEST environment (.env.test)
+  python run.py --env production          # Chạy PRODUCTION (.env.production)
+  python run.py --env test --reload       # Chạy TEST với auto-reload
+  python run.py --port 3000               # Chạy trên port 3000
+  python run.py --reload                  # Chạy với auto-reload (dev mode)
+  python run.py --host 0.0.0.0            # Cho phép truy cập từ bên ngoài
+  python run.py --workers 4               # Chạy với 4 workers (production)
         """
+    )
+    
+    parser.add_argument(
+        "--env",
+        type=str,
+        default="development",
+        choices=["development", "test", "production"],
+        help="Môi trường chạy: development (dùng .env), test (dùng .env.test), production (dùng .env.production) - mặc định: development"
     )
     
     parser.add_argument(
@@ -174,6 +202,22 @@ Ví dụ:
     
     args = parser.parse_args()
     
+    # Load đúng .env file dựa theo --env flag
+    env_map = {
+        "development": ".env",
+        "test": ".env.test",
+        "production": ".env.production"
+    }
+    env_file = env_map[args.env]
+    
+    # Set biến môi trường để Pydantic settings load đúng file
+    os.environ["ENV_FILE"] = str(BACKEND_ROOT / env_file)
+    
+    print(f"\n{'='*60}")
+    print(f"⚡ ENVIRONMENT: {args.env.upper()}")
+    print(f"📄 Config file: {env_file}")
+    print(f"{'='*60}\n")
+    
     # Kiểm tra môi trường
     if not args.skip_checks:
         check_environment()
@@ -194,7 +238,7 @@ Ví dụ:
     
     # Dev mode (single worker với reload)
     if args.reload:
-        print("[SETUP] Chạy ở chế độ DEVELOPMENT (auto-reload)")
+        print(f"[SETUP] Chạy ở chế độ DEVELOPMENT (auto-reload)")
         print(f"[SERVER] Server: http://{args.host}:{args.port}")
         print(f"[DOCS] Docs: http://{args.host}:{args.port}/docs")
         print("\n[TIP] Nhấn Ctrl+C để dừng server\n")

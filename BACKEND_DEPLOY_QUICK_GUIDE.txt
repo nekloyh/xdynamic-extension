@@ -1,0 +1,195 @@
+╔═══════════════════════════════════════════════════════════════╗
+║       HƯỚNG DẪN NHANH - DEPLOY BACKEND LÊN SERVER             ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📦 GỬI CHO BẠN DEPLOY (3 FILES)
+═════════════════════════════════════════════════════════════════
+
+1. Thư mục backend/ (toàn bộ)
+2. File .env.production (đã cấu hình)
+3. File DEPLOYMENT_GUIDE.md (hướng dẫn)
+
+
+🔧 BẠN CẦN LÀM GÌ?
+═════════════════════════════════════════════════════════════════
+
+BƯỚC 1: Cấu hình .env.production
+────────────────────────────────────────────────────────────────
+cd backend
+cp .env.example .env.production
+nano .env.production
+
+Sửa các thông tin sau:
+
+✓ APP_URL=https://app.xdynamic.cloud/fe
+✓ DEBUG=false
+✓ JWT_SECRET_KEY=<tạo-secret-key-mới>
+✓ GOOGLE_CLIENT_ID=<nếu-dùng-OAuth>
+✓ GOOGLE_REDIRECT_URI=https://app.xdynamic.cloud/api/auth/google/callback
+✓ MOMO_REDIRECT_URL=https://app.xdynamic.cloud/api/payment/success
+
+Tạo JWT Secret:
+  openssl rand -hex 32
+
+
+BƯỚC 2: Nén và gửi
+────────────────────────────────────────────────────────────────
+cd backend
+tar -czf xdynamic-backend.tar.gz .
+
+Gửi file: xdynamic-backend.tar.gz
+
+
+📬 HƯỚNG DẪN CHO BẠN DEPLOY
+═════════════════════════════════════════════════════════════════
+
+YÊU CẦU SERVER:
+- Docker & Docker Compose đã cài
+- Port 8000 available
+- 2GB RAM, 10GB disk
+
+
+DEPLOY NHANH (3 LỆNH):
+────────────────────────────────────────────────────────────────
+1. Upload và giải nén:
+   scp xdynamic-backend.tar.gz user@server:/path/
+   ssh user@server
+   cd /path && tar -xzf xdynamic-backend.tar.gz
+
+2. Cấu hình:
+   cp .env.production .env
+
+3. Deploy:
+   ./deploy.sh
+
+   Hoặc thủ công:
+   docker build -t xdynamic-api:latest .
+   docker-compose -f docker-compose.prod.yaml up -d
+
+
+HOẶC DEPLOY THỦ CÔNG:
+────────────────────────────────────────────────────────────────
+# Build image
+docker build -t xdynamic-api:latest .
+
+# Run container
+docker run -d \
+  --name xdynamic-api \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  xdynamic-api:latest
+
+
+KIỂM TRA:
+────────────────────────────────────────────────────────────────
+curl http://localhost:8000/health
+# Response: {"status":"ok"}
+
+docker logs xdynamic-api
+
+
+SETUP NGINX (Optional):
+────────────────────────────────────────────────────────────────
+server {
+    listen 80;
+    server_name app.xdynamic.cloud;
+    
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+# SSL
+sudo certbot --nginx -d app.xdynamic.cloud
+
+
+🔍 TROUBLESHOOTING
+═════════════════════════════════════════════════════════════════
+
+Container không start:
+  docker logs xdynamic-api
+
+Port bị chiếm:
+  sudo lsof -i :8000
+  docker stop xdynamic-api
+
+Rebuild:
+  docker stop xdynamic-api
+  docker rm xdynamic-api
+  docker build -t xdynamic-api:latest .
+  ./deploy.sh
+
+
+📊 QUẢN LÝ
+═════════════════════════════════════════════════════════════════
+
+Xem logs:
+  docker logs -f xdynamic-api
+
+Restart:
+  docker restart xdynamic-api
+
+Stop:
+  docker stop xdynamic-api
+
+Update code mới:
+  git pull
+  docker build -t xdynamic-api:latest .
+  docker-compose -f docker-compose.prod.yaml up -d
+
+
+✅ CHECKLIST
+═════════════════════════════════════════════════════════════════
+
+Trước khi gửi:
+  [ ] File .env.production đã cấu hình
+  [ ] JWT_SECRET_KEY đã thay đổi
+  [ ] Domain đã cập nhật (app.xdynamic.cloud)
+  [ ] File mobilenetv2_dangerous_objects.pth có trong backend/
+  [ ] Đã test build local: docker build -t test .
+
+Sau khi deploy:
+  [ ] API health check OK
+  [ ] CORS hoạt động với extension
+  [ ] OAuth callback đúng URL
+  [ ] Payment redirect đúng URL
+  [ ] SSL/HTTPS đã setup
+
+
+📁 CẤU TRÚC GỬI ĐI
+═════════════════════════════════════════════════════════════════
+
+xdynamic-backend.tar.gz
+└── Chứa:
+    ├── Dockerfile
+    ├── requirements.txt
+    ├── mobilenetv2_dangerous_objects.pth
+    ├── .env.production
+    ├── deploy.sh
+    ├── docker-compose.prod.yaml
+    ├── DEPLOYMENT_GUIDE.md
+    └── app/
+
+
+📞 SUPPORT
+═════════════════════════════════════════════════════════════════
+
+Nếu gặp lỗi:
+1. Check logs: docker logs xdynamic-api
+2. Verify .env file
+3. Check disk space: df -h
+4. Check memory: free -h
+5. Đọc DEPLOYMENT_GUIDE.md
+
+
+═════════════════════════════════════════════════════════════════
+
+Build Date: 2025-12-04
+Version: 1.0.0
+Docker Image: xdynamic-api:latest
+API Port: 8000
+

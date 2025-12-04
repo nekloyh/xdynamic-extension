@@ -58,4 +58,7 @@ export default defineConfig({
       port: 5174,
     },
   },
+
+  // Load environment variables based on NODE_ENV or custom env
+  envPrefix: 'VITE_',
 });
