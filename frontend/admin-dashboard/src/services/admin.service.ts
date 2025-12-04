@@ -132,11 +132,28 @@ export interface UsageLogsResponse {
   limit: number;
 }
 
+export interface ChartDataPoint {
+  date: string;
+  revenue: number;
+  users: number;
+}
+
+export interface ChartsData {
+  data: ChartDataPoint[];
+  total_revenue: number;
+  total_users: number;
+}
+
 // Admin Service
 export const adminService = {
   // Stats
   getOverviewStats: async (): Promise<OverviewStats> => {
     return apiRequest<OverviewStats>('/admin/stats/overview');
+  },
+
+  // Charts data (revenue & users over time)
+  getChartsData: async (days = 30): Promise<ChartsData> => {
+    return apiRequest<ChartsData>(`/admin/stats/charts?days=${days}`);
   },
 
   // Users

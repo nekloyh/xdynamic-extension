@@ -43,7 +43,7 @@ interface TrainingJob {
 const mockModels: ModelInfo[] = [
   { id: 'model_001', name: 'Content Classifier', version: 'v2.5.1', accuracy: 94.5, status: 'active', lastTrained: '2025-11-28', datasetSize: 150000 },
   { id: 'model_002', name: 'Image Detector', version: 'v1.8.0', accuracy: 91.2, status: 'training', lastTrained: '2025-11-25', datasetSize: 85000 },
-  { id: 'model_003', name: 'Text Analyzer', version: 'v3.0.2', accuracy: 96.8, status: 'active', lastTrained: '2025-11-30', datasetSize: 200000 },
+  { id: 'model_003', name: 'Text Analyzer', version: 'v3.0.2', accuracy: 96.8, status: 'idle', lastTrained: '2025-11-30', datasetSize: 10000 },
   { id: 'model_004', name: 'Spam Filter', version: 'v2.1.0', accuracy: 98.1, status: 'idle', lastTrained: '2025-11-20', datasetSize: 50000 },
 ];
 
