@@ -7,35 +7,61 @@ import {
   Activity,
   TrendingUp,
   TrendingDown,
-  AlertTriangle
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   LineChart, 
   Line, 
+  BarChart,
+  Bar,
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer
 } from 'recharts';
-import { adminService, OverviewStats, ChartsData, ApiError } from '../services/admin.service';
+import { 
+  adminService, 
+  OverviewStats, 
+  ApiError,
+  RevenueOvertime,
+  NewUsersOvertime,
+  UserPredictCallsList,
+  UserPaymentTotalList,
+  SystemStatus
+} from '../services/admin.service';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 
 export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<OverviewStats | null>(null);
-  const [chartsData, setChartsData] = useState<ChartsData | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueOvertime | null>(null);
+  const [newUsersData, setNewUsersData] = useState<NewUsersOvertime | null>(null);
+  const [predictCallsData, setPredictCallsData] = useState<UserPredictCallsList | null>(null);
+  const [paymentData, setPaymentData] = useState<UserPaymentTotalList | null>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [predictPage, setPredictPage] = useState(1);
+  const [paymentPage, setPaymentPage] = useState(1);
   const { toasts, error } = useToast();
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsData, charts] = await Promise.all([
+      const [statsData, revenue, newUsers, predictCalls, payments, status] = await Promise.all([
         adminService.getOverviewStats(),
-        adminService.getChartsData(30)
+        adminService.getRevenueOvertime(30),
+        adminService.getNewUsersOvertime(30),
+        adminService.getUserPredictCalls(1, 10, true),
+        adminService.getUserPaymentTotals(1, 10, true),
+        adminService.getSystemStatus()
       ]);
       setStats(statsData);
-      setChartsData(charts);
+      setRevenueData(revenue);
+      setNewUsersData(newUsers);
+      setPredictCallsData(predictCalls);
+      setPaymentData(payments);
+      setSystemStatus(status);
     } catch (err) {
       console.error('Failed to fetch data', err);
       if (err instanceof ApiError) {
@@ -47,6 +73,26 @@ export const Dashboard: React.FC = () => {
       setIsLoading(false);
     }
   }, [error]);
+
+  const fetchPredictCalls = useCallback(async (page: number) => {
+    try {
+      const data = await adminService.getUserPredictCalls(page, 10, true);
+      setPredictCallsData(data);
+      setPredictPage(page);
+    } catch (err) {
+      console.error('Failed to fetch predict calls', err);
+    }
+  }, []);
+
+  const fetchPayments = useCallback(async (page: number) => {
+    try {
+      const data = await adminService.getUserPaymentTotals(page, 10, true);
+      setPaymentData(data);
+      setPaymentPage(page);
+    } catch (err) {
+      console.error('Failed to fetch payments', err);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -155,33 +201,80 @@ export const Dashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">System Status</h2>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              {/* API Server */}
+              <div className={`flex items-center justify-between p-4 rounded-lg ${
+                systemStatus?.api_server === 'operational' ? 'bg-gray-50' :
+                systemStatus?.api_server === 'degraded' ? 'bg-amber-50 border border-amber-200' :
+                'bg-red-50 border border-red-200'
+              }`}>
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className={`w-3 h-3 rounded-full ${
+                    systemStatus?.api_server === 'operational' ? 'bg-green-500' :
+                    systemStatus?.api_server === 'degraded' ? 'bg-amber-500' : 'bg-red-500'
+                  }`}></div>
                   <span className="text-sm font-medium text-gray-700">API Server</span>
                 </div>
-                <span className="text-sm font-medium text-green-600">Operational</span>
+                <span className={`text-sm font-medium capitalize ${
+                  systemStatus?.api_server === 'operational' ? 'text-green-600' :
+                  systemStatus?.api_server === 'degraded' ? 'text-amber-600' : 'text-red-600'
+                }`}>{systemStatus?.api_server ?? 'Checking...'}</span>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              
+              {/* Database */}
+              <div className={`flex items-center justify-between p-4 rounded-lg ${
+                systemStatus?.database === 'operational' ? 'bg-gray-50' :
+                systemStatus?.database === 'degraded' ? 'bg-amber-50 border border-amber-200' :
+                'bg-red-50 border border-red-200'
+              }`}>
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className={`w-3 h-3 rounded-full ${
+                    systemStatus?.database === 'operational' ? 'bg-green-500' :
+                    systemStatus?.database === 'degraded' ? 'bg-amber-500' : 'bg-red-500'
+                  }`}></div>
                   <span className="text-sm font-medium text-gray-700">Database</span>
                 </div>
-                <span className="text-sm font-medium text-green-600">Operational</span>
+                <span className={`text-sm font-medium capitalize ${
+                  systemStatus?.database === 'operational' ? 'text-green-600' :
+                  systemStatus?.database === 'degraded' ? 'text-amber-600' : 'text-red-600'
+                }`}>{systemStatus?.database ?? 'Checking...'}</span>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              
+              {/* ML Inference */}
+              <div className={`flex items-center justify-between p-4 rounded-lg ${
+                systemStatus?.ml_inference === 'operational' ? 'bg-gray-50' :
+                systemStatus?.ml_inference === 'degraded' ? 'bg-amber-50 border border-amber-200' :
+                'bg-red-50 border border-red-200'
+              }`}>
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className={`w-3 h-3 rounded-full ${
+                    systemStatus?.ml_inference === 'operational' ? 'bg-green-500' :
+                    systemStatus?.ml_inference === 'degraded' ? 'bg-amber-500' : 'bg-red-500'
+                  }`}></div>
                   <span className="text-sm font-medium text-gray-700">ML Inference</span>
                 </div>
-                <span className="text-sm font-medium text-green-600">Operational</span>
+                <span className={`text-sm font-medium capitalize ${
+                  systemStatus?.ml_inference === 'operational' ? 'text-green-600' :
+                  systemStatus?.ml_inference === 'degraded' ? 'text-amber-600' : 'text-red-600'
+                }`}>{systemStatus?.ml_inference ?? 'Checking...'}</span>
               </div>
-              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
+              
+              {/* Payment Gateway */}
+              <div className={`flex items-center justify-between p-4 rounded-lg ${
+                systemStatus?.payment_gateway === 'operational' ? 'bg-gray-50' :
+                systemStatus?.payment_gateway === 'degraded' ? 'bg-amber-50 border border-amber-200' :
+                'bg-red-50 border border-red-200'
+              }`}>
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                  <div className={`w-3 h-3 rounded-full ${
+                    systemStatus?.payment_gateway === 'operational' ? 'bg-green-500' :
+                    systemStatus?.payment_gateway === 'degraded' ? 'bg-amber-500' : 'bg-red-500'
+                  }`}></div>
                   <span className="text-sm font-medium text-gray-700">Payment Gateway</span>
                 </div>
-                <span className="text-sm font-medium text-amber-600">Degraded</span>
+                <span className={`text-sm font-medium capitalize ${
+                  systemStatus?.payment_gateway === 'operational' ? 'text-green-600' :
+                  systemStatus?.payment_gateway === 'degraded' ? 'text-amber-600' : 'text-red-600'
+                }`}>{systemStatus?.payment_gateway ?? 'Checking...'}</span>
               </div>
             </div>
           </div>
@@ -190,15 +283,6 @@ export const Dashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Pending Actions</h2>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border-l-4 border-amber-500">
-                <div className="flex items-center space-x-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                  <span className="text-sm font-medium text-gray-700">Pending Reports</span>
-                </div>
-                <span className="text-lg font-bold text-amber-600">
-                  {stats?.pending_reports ?? 0}
-                </span>
-              </div>
               <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <div className="flex items-center space-x-3">
                   <Users className="w-5 h-5 text-blue-600" />
@@ -221,88 +305,231 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Charts Section - Only show if there's data */}
-        {chartsData && chartsData.data.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Chart */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Revenue Over Time</h2>
-                <span className="text-sm text-gray-500">Last 30 days</span>
-              </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartsData.data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => {
-                      const date = new Date(value);
-                      return `${date.getDate()}/${date.getMonth() + 1}`;
-                    }}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                      if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                      return value;
-                    }}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [
-                      new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value),
-                      'Revenue'
-                    ]}
-                    labelFormatter={(label) => new Date(label).toLocaleDateString('vi-VN')}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#10B981" 
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+        {/* Revenue Cumulative Chart */}
+        {revenueData && revenueData.data.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">📊 Revenue Overtime (Cumulative)</h2>
+              <span className="text-sm text-gray-500">
+                Total: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(revenueData.total_revenue)}
+              </span>
             </div>
-
-            {/* New Users Chart */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">New Users</h2>
-                <span className="text-sm text-gray-500">Last 30 days</span>
-              </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartsData.data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => {
-                      const date = new Date(value);
-                      return `${date.getDate()}/${date.getMonth() + 1}`;
-                    }}
-                  />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip 
-                    formatter={(value: number) => [value, 'New Users']}
-                    labelFormatter={(label) => new Date(label).toLocaleDateString('vi-VN')}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="users" 
-                    stroke="#3B82F6" 
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={revenueData.data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value: string) => {
+                    const date = new Date(value);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                  }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: number) => {
+                    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                    return String(value);
+                  }}
+                />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value),
+                    name === 'cumulative_revenue' ? 'Cumulative' : 'Daily'
+                  ]}
+                  labelFormatter={(label: string) => new Date(label).toLocaleDateString('vi-VN')}
+                />
+                <Bar dataKey="cumulative_revenue" fill="#10B981" name="Cumulative Revenue" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
+
+        {/* New Users Overtime Chart */}
+        {newUsersData && newUsersData.data.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">👥 New Users Overtime</h2>
+              <span className="text-sm text-gray-500">
+                Total Users: {newUsersData.total_users}
+              </span>
+            </div>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={[...newUsersData.data].reverse()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value: string) => {
+                    const date = new Date(value);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                  }}
+                />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    value,
+                    name === 'cumulative_count' ? 'Cumulative' : 'Daily'
+                  ]}
+                  labelFormatter={(label: string) => new Date(label).toLocaleDateString('vi-VN')}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#3B82F6" 
+                  strokeWidth={2}
+                  dot={false}
+                  name="Daily New Users"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="cumulative_count" 
+                  stroke="#8B5CF6" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name="Cumulative"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Tables Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* User Predict Calls Table */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">🔮 Predict API Calls per User</h2>
+              {predictCallsData && (
+                <span className="text-sm text-gray-500">
+                  Total: {predictCallsData.total} users
+                </span>
+              )}
+            </div>
+            {predictCallsData ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Calls</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {predictCallsData.data.map((user) => (
+                        <tr key={user.user_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            #{user.user_id}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                            {user.email}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-blue-600">
+                            {user.total_calls.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Pagination */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <span className="text-sm text-gray-500">
+                    Page {predictPage} of {Math.ceil(predictCallsData.total / 10)}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => fetchPredictCalls(predictPage - 1)}
+                      disabled={predictPage <= 1}
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => fetchPredictCalls(predictPage + 1)}
+                      disabled={predictPage >= Math.ceil(predictCallsData.total / 10)}
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Loading...</div>
+            )}
+          </div>
+
+          {/* User Payment Totals Table */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">💰 Payment per User</h2>
+              {paymentData && (
+                <span className="text-sm text-gray-500">
+                  Total: {paymentData.total} users
+                </span>
+              )}
+            </div>
+            {paymentData ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {paymentData.data.map((user) => (
+                        <tr key={user.user_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            #{user.user_id}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                            {user.email}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-green-600">
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(user.total_amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Pagination */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <span className="text-sm text-gray-500">
+                    Page {paymentPage} of {Math.ceil(paymentData.total / 10)}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => fetchPayments(paymentPage - 1)}
+                      disabled={paymentPage <= 1}
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => fetchPayments(paymentPage + 1)}
+                      disabled={paymentPage >= Math.ceil(paymentData.total / 10)}
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Loading...</div>
+            )}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

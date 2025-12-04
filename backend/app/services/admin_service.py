@@ -9,7 +9,9 @@ from app.models.usage_log import UsageLog
 from app.schemas.admin import (
     OverviewStats, UsageStats, UsageDataPoint, AccuracyStats,
     TopCategory, Activity, ActivityType, Report, ReportStatus, ReportAction,
-    AdminUser, AdminUserList, AdminUserUpdate, SystemSettingItem, SystemSettingsUpdate
+    AdminUser, AdminUserList, AdminUserUpdate, SystemSettingItem, SystemSettingsUpdate,
+    RevenueDataPoint, RevenueOvertime, NewUsersDataPoint, NewUsersOvertime,
+    UserPredictCalls, UserPredictCallsList, UserPaymentTotal, UserPaymentTotalList
 )
 from app.models.transaction import Transaction, TransactionStatus, TransactionType
 from app.models.system_setting import SystemSetting
@@ -51,11 +53,12 @@ class AdminService:
             func.date(UsageLog.created_at) == today
         ).distinct().count()
         
-        # Mocking blocked content count based on usage logs (assuming 10% block rate for demo)
-        total_usage = db.query(UsageLog).count()
-        content_blocked = int(total_usage * 0.12) 
-        
-        pending_reports = len([r for r in MOCK_REPORTS if r.status == ReportStatus.PENDING])
+        # Real count: blocked content from usage_logs meta_data
+        # Check for "blocked": true or "blocked":true patterns
+        content_blocked = db.query(UsageLog).filter(
+            (UsageLog.meta_data.like('%"blocked": true%')) | 
+            (UsageLog.meta_data.like('%"blocked":true%'))
+        ).count()
         
         # Calculate total revenue
         total_revenue = db.query(func.sum(Transaction.amount)).filter(
@@ -63,20 +66,13 @@ class AdminService:
             Transaction.type.in_([TransactionType.TOPUP, TransactionType.PURCHASE])
         ).scalar() or 0.0
 
-        # Calculate blocked images count
-        # We need to check meta_data for "blocked": true
-        # Since meta_data is a string, we might need to do a like query or load and filter
-        # For better performance in production, this should be a separate column or indexed JSONB
-        # For now, we'll use a simple LIKE query as a heuristic
-        blocked_images_count = db.query(UsageLog).filter(
-            UsageLog.meta_data.like('%"blocked": true%')
-        ).count()
+        # Calculate blocked images count (same as content_blocked for now)
+        blocked_images_count = content_blocked
 
         return OverviewStats(
             total_users=total_users,
             active_today=active_today,
-            content_blocked=content_blocked, # This was the mock one, maybe we should replace it?
-            pending_reports=pending_reports,
+            content_blocked=content_blocked,
             total_revenue=total_revenue,
             blocked_images_count=blocked_images_count
         )
@@ -311,3 +307,276 @@ class AdminService:
         
         db.commit()
         return {"success": True, "message": "Settings updated successfully"}
+
+    @staticmethod
+    def get_charts_data(db: Session, days: int = 30):
+        """Get revenue and user registration data grouped by day for charts"""
+        from app.schemas.admin import ChartDataPoint, ChartsData
+        
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get revenue by day (only successful transactions)
+        revenue_query = db.query(
+            func.date(Transaction.created_at).label("date"),
+            func.sum(Transaction.amount).label("total")
+        ).filter(
+            Transaction.created_at >= start_date,
+            Transaction.status == TransactionStatus.SUCCESS,
+            Transaction.type.in_([TransactionType.TOPUP, TransactionType.PURCHASE])
+        ).group_by(
+            func.date(Transaction.created_at)
+        ).all()
+        
+        revenue_map = {str(r.date): float(r.total or 0) for r in revenue_query}
+        
+        # Get new users by day
+        users_query = db.query(
+            func.date(User.created_at).label("date"),
+            func.count(User.id).label("count")
+        ).filter(
+            User.created_at >= start_date
+        ).group_by(
+            func.date(User.created_at)
+        ).all()
+        
+        users_map = {str(u.date): u.count for u in users_query}
+        
+        # Build chart data for each day
+        chart_data = []
+        current = start_date
+        while current <= end_date:
+            date_str = str(current.date())
+            chart_data.append(ChartDataPoint(
+                date=date_str,
+                revenue=revenue_map.get(date_str, 0),
+                users=users_map.get(date_str, 0)
+            ))
+            current += timedelta(days=1)
+        
+        # Calculate totals
+        total_revenue = db.query(func.sum(Transaction.amount)).filter(
+            Transaction.status == TransactionStatus.SUCCESS,
+            Transaction.type.in_([TransactionType.TOPUP, TransactionType.PURCHASE])
+        ).scalar() or 0.0
+        
+        total_users = db.query(User).count()
+        
+        return ChartsData(
+            data=chart_data,
+            total_revenue=float(total_revenue),
+            total_users=total_users
+        )
+
+    @staticmethod
+    def get_revenue_overtime(db: Session, days: int = 30) -> RevenueOvertime:
+        """Get daily and cumulative revenue over time"""
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get daily revenue (only successful transactions)
+        revenue_query = db.query(
+            func.date(Transaction.created_at).label("date"),
+            func.sum(Transaction.amount).label("total")
+        ).filter(
+            Transaction.created_at >= start_date,
+            Transaction.status == TransactionStatus.SUCCESS,
+            Transaction.type.in_([TransactionType.TOPUP, TransactionType.PURCHASE])
+        ).group_by(
+            func.date(Transaction.created_at)
+        ).order_by(
+            func.date(Transaction.created_at)
+        ).all()
+        
+        revenue_map = {str(r.date): float(r.total or 0) for r in revenue_query}
+        
+        # Build cumulative data
+        chart_data = []
+        cumulative = 0
+        current = start_date
+        
+        while current <= end_date:
+            date_str = str(current.date())
+            daily = revenue_map.get(date_str, 0)
+            cumulative += daily
+            chart_data.append(RevenueDataPoint(
+                date=date_str,
+                daily_revenue=daily,
+                cumulative_revenue=cumulative
+            ))
+            current += timedelta(days=1)
+        
+        # Get total revenue
+        total_revenue = db.query(func.sum(Transaction.amount)).filter(
+            Transaction.status == TransactionStatus.SUCCESS,
+            Transaction.type.in_([TransactionType.TOPUP, TransactionType.PURCHASE])
+        ).scalar() or 0.0
+        
+        return RevenueOvertime(
+            data=chart_data,
+            total_revenue=float(total_revenue)
+        )
+
+    @staticmethod
+    def get_new_users_overtime(db: Session, days: int = 30) -> NewUsersOvertime:
+        """Get new user registrations over time (sorted descending)"""
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get new users by day
+        users_query = db.query(
+            func.date(User.created_at).label("date"),
+            func.count(User.id).label("count")
+        ).filter(
+            User.created_at >= start_date
+        ).group_by(
+            func.date(User.created_at)
+        ).order_by(
+            func.date(User.created_at)
+        ).all()
+        
+        users_map = {str(u.date): u.count for u in users_query}
+        
+        # Build cumulative data
+        chart_data = []
+        cumulative = 0
+        current = start_date
+        
+        while current <= end_date:
+            date_str = str(current.date())
+            daily = users_map.get(date_str, 0)
+            cumulative += daily
+            chart_data.append(NewUsersDataPoint(
+                date=date_str,
+                count=daily,
+                cumulative_count=cumulative
+            ))
+            current += timedelta(days=1)
+        
+        # Sort descending by date
+        chart_data.reverse()
+        
+        total_users = db.query(User).count()
+        
+        return NewUsersOvertime(
+            data=chart_data,
+            total_users=total_users
+        )
+
+    @staticmethod
+    def get_user_predict_calls(
+        db: Session,
+        page: int = 1,
+        limit: int = 10,
+        sort_desc: bool = True
+    ) -> UserPredictCallsList:
+        """Get total predict API calls per user"""
+        # Query usage logs for predict endpoints
+        subquery = db.query(
+            UsageLog.user_id,
+            func.count(UsageLog.id).label("total_calls")
+        ).filter(
+            UsageLog.endpoint.like("%predict%")
+        ).group_by(
+            UsageLog.user_id
+        ).subquery()
+        
+        # Join with users
+        query = db.query(
+            User.id,
+            User.email,
+            User.name,
+            func.coalesce(subquery.c.total_calls, 0).label("total_calls")
+        ).outerjoin(
+            subquery, User.id == subquery.c.user_id
+        )
+        
+        # Sort
+        if sort_desc:
+            query = query.order_by(func.coalesce(subquery.c.total_calls, 0).desc())
+        else:
+            query = query.order_by(func.coalesce(subquery.c.total_calls, 0).asc())
+        
+        # Get total count
+        total = query.count()
+        
+        # Pagination
+        results = query.offset((page - 1) * limit).limit(limit).all()
+        
+        data = [
+            UserPredictCalls(
+                user_id=r.id,
+                email=r.email,
+                name=r.name,
+                total_calls=r.total_calls
+            )
+            for r in results
+        ]
+        
+        return UserPredictCallsList(
+            data=data,
+            total=total,
+            page=page,
+            limit=limit
+        )
+
+    @staticmethod
+    def get_user_payment_totals(
+        db: Session,
+        page: int = 1,
+        limit: int = 10,
+        sort_desc: bool = True
+    ) -> UserPaymentTotalList:
+        """Get total payment amount per user"""
+        # Query successful transactions
+        subquery = db.query(
+            Transaction.user_id,
+            func.sum(Transaction.amount).label("total_amount"),
+            func.count(Transaction.id).label("transaction_count")
+        ).filter(
+            Transaction.status == TransactionStatus.SUCCESS,
+            Transaction.type.in_([TransactionType.TOPUP, TransactionType.PURCHASE])
+        ).group_by(
+            Transaction.user_id
+        ).subquery()
+        
+        # Join with users
+        query = db.query(
+            User.id,
+            User.email,
+            User.name,
+            func.coalesce(subquery.c.total_amount, 0).label("total_amount"),
+            func.coalesce(subquery.c.transaction_count, 0).label("transaction_count")
+        ).outerjoin(
+            subquery, User.id == subquery.c.user_id
+        )
+        
+        # Sort
+        if sort_desc:
+            query = query.order_by(func.coalesce(subquery.c.total_amount, 0).desc())
+        else:
+            query = query.order_by(func.coalesce(subquery.c.total_amount, 0).asc())
+        
+        # Get total count
+        total = query.count()
+        
+        # Pagination
+        results = query.offset((page - 1) * limit).limit(limit).all()
+        
+        data = [
+            UserPaymentTotal(
+                user_id=r.id,
+                email=r.email,
+                name=r.name,
+                total_amount=float(r.total_amount),
+                transaction_count=r.transaction_count
+            )
+            for r in results
+        ]
+        
+        return UserPaymentTotalList(
+            data=data,
+            total=total,
+            page=page,
+            limit=limit
+        )

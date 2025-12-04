@@ -106,7 +106,6 @@ export interface OverviewStats {
   total_users: number;
   active_today: number;
   content_blocked: number;
-  pending_reports: number;
   total_revenue: number;
   blocked_images_count: number;
 }
@@ -144,6 +143,66 @@ export interface ChartsData {
   total_users: number;
 }
 
+// ===== NEW ANALYTICS TYPES =====
+
+export interface RevenueDataPoint {
+  date: string;
+  daily_revenue: number;
+  cumulative_revenue: number;
+}
+
+export interface RevenueOvertime {
+  data: RevenueDataPoint[];
+  total_revenue: number;
+}
+
+export interface NewUsersDataPoint {
+  date: string;
+  count: number;
+  cumulative_count: number;
+}
+
+export interface NewUsersOvertime {
+  data: NewUsersDataPoint[];
+  total_users: number;
+}
+
+export interface UserPredictCalls {
+  user_id: number;
+  email: string;
+  name: string | null;
+  total_calls: number;
+}
+
+export interface UserPredictCallsList {
+  data: UserPredictCalls[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface UserPaymentTotal {
+  user_id: number;
+  email: string;
+  name: string | null;
+  total_amount: number;
+  transaction_count: number;
+}
+
+export interface UserPaymentTotalList {
+  data: UserPaymentTotal[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface SystemStatus {
+  api_server: 'operational' | 'degraded' | 'down';
+  database: 'operational' | 'degraded' | 'down';
+  ml_inference: 'operational' | 'degraded' | 'down';
+  payment_gateway: 'operational' | 'degraded' | 'down';
+}
+
 // Admin Service
 export const adminService = {
   // Stats
@@ -151,9 +210,78 @@ export const adminService = {
     return apiRequest<OverviewStats>('/admin/stats/overview');
   },
 
+  // System health check
+  getSystemStatus: async (): Promise<SystemStatus> => {
+    const status: SystemStatus = {
+      api_server: 'operational',
+      database: 'operational',
+      ml_inference: 'operational',
+      payment_gateway: 'operational',
+    };
+
+    try {
+      // Check API server by calling root endpoint
+      const response = await fetch(`${API_URL}/`, { method: 'GET' });
+      if (!response.ok) {
+        status.api_server = 'degraded';
+      }
+    } catch {
+      status.api_server = 'down';
+    }
+
+    try {
+      // Check database by calling stats endpoint
+      await apiRequest('/admin/stats/overview');
+      status.database = 'operational';
+    } catch {
+      status.database = 'down';
+    }
+
+    // ML inference check - if API is up, ML should be up too
+    status.ml_inference = status.api_server === 'operational' ? 'operational' : 'down';
+
+    // Payment gateway - check MoMo or payment endpoint if available
+    // For now, assume operational if API is up
+    status.payment_gateway = status.api_server === 'operational' ? 'operational' : 'down';
+
+    return status;
+  },
+
   // Charts data (revenue & users over time)
   getChartsData: async (days = 30): Promise<ChartsData> => {
     return apiRequest<ChartsData>(`/admin/stats/charts?days=${days}`);
+  },
+
+  // Revenue overtime (cumulative)
+  getRevenueOvertime: async (days = 30): Promise<RevenueOvertime> => {
+    return apiRequest<RevenueOvertime>(`/admin/stats/revenue-overtime?days=${days}`);
+  },
+
+  // New users overtime
+  getNewUsersOvertime: async (days = 30): Promise<NewUsersOvertime> => {
+    return apiRequest<NewUsersOvertime>(`/admin/stats/new-users-overtime?days=${days}`);
+  },
+
+  // User predict calls
+  getUserPredictCalls: async (
+    page = 1,
+    limit = 10,
+    sortDesc = true
+  ): Promise<UserPredictCallsList> => {
+    return apiRequest<UserPredictCallsList>(
+      `/admin/stats/user-predict-calls?page=${page}&limit=${limit}&sort_desc=${sortDesc}`
+    );
+  },
+
+  // User payment totals
+  getUserPaymentTotals: async (
+    page = 1,
+    limit = 10,
+    sortDesc = true
+  ): Promise<UserPaymentTotalList> => {
+    return apiRequest<UserPaymentTotalList>(
+      `/admin/stats/user-payments?page=${page}&limit=${limit}&sort_desc=${sortDesc}`
+    );
   },
 
   // Users
