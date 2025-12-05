@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const ADMIN_PREFIX = '/api/admin';
 
 // Token key constant
 const TOKEN_KEY = 'admin_token';
@@ -207,7 +208,7 @@ export interface SystemStatus {
 export const adminService = {
   // Stats
   getOverviewStats: async (): Promise<OverviewStats> => {
-    return apiRequest<OverviewStats>('/admin/stats/overview');
+    return apiRequest<OverviewStats>(`${ADMIN_PREFIX}/stats/overview`);
   },
 
   // System health check
@@ -231,7 +232,7 @@ export const adminService = {
 
     try {
       // Check database by calling stats endpoint
-      await apiRequest('/admin/stats/overview');
+      await apiRequest(`${ADMIN_PREFIX}/stats/overview`);
       status.database = 'operational';
     } catch {
       status.database = 'down';
@@ -249,17 +250,17 @@ export const adminService = {
 
   // Charts data (revenue & users over time)
   getChartsData: async (days = 30): Promise<ChartsData> => {
-    return apiRequest<ChartsData>(`/admin/stats/charts?days=${days}`);
+    return apiRequest<ChartsData>(`${ADMIN_PREFIX}/stats/charts?days=${days}`);
   },
 
   // Revenue overtime (cumulative)
   getRevenueOvertime: async (days = 30): Promise<RevenueOvertime> => {
-    return apiRequest<RevenueOvertime>(`/admin/stats/revenue-overtime?days=${days}`);
+    return apiRequest<RevenueOvertime>(`${ADMIN_PREFIX}/stats/revenue-overtime?days=${days}`);
   },
 
   // New users overtime
   getNewUsersOvertime: async (days = 30): Promise<NewUsersOvertime> => {
-    return apiRequest<NewUsersOvertime>(`/admin/stats/new-users-overtime?days=${days}`);
+    return apiRequest<NewUsersOvertime>(`${ADMIN_PREFIX}/stats/new-users-overtime?days=${days}`);
   },
 
   // User predict calls
@@ -269,7 +270,7 @@ export const adminService = {
     sortDesc = true
   ): Promise<UserPredictCallsList> => {
     return apiRequest<UserPredictCallsList>(
-      `/admin/stats/user-predict-calls?page=${page}&limit=${limit}&sort_desc=${sortDesc}`
+      `${ADMIN_PREFIX}/stats/user-predict-calls?page=${page}&limit=${limit}&sort_desc=${sortDesc}`
     );
   },
 
@@ -280,7 +281,7 @@ export const adminService = {
     sortDesc = true
   ): Promise<UserPaymentTotalList> => {
     return apiRequest<UserPaymentTotalList>(
-      `/admin/stats/user-payments?page=${page}&limit=${limit}&sort_desc=${sortDesc}`
+      `${ADMIN_PREFIX}/stats/user-payments?page=${page}&limit=${limit}&sort_desc=${sortDesc}`
     );
   },
 
@@ -299,11 +300,11 @@ export const adminService = {
     if (status) params.set('status', status);
     if (role) params.set('role', role);
     
-    return apiRequest<UserListResponse>(`/admin/users?${params}`);
+    return apiRequest<UserListResponse>(`${ADMIN_PREFIX}/users?${params}`);
   },
 
   getUserById: async (userId: number): Promise<User> => {
-    return apiRequest<User>(`/admin/users/${userId}`);
+    return apiRequest<User>(`${ADMIN_PREFIX}/users/${userId}`);
   },
 
   updateUserStatus: async (
@@ -311,7 +312,7 @@ export const adminService = {
     isActive: boolean | null,
     isAdmin: boolean | null
   ): Promise<User> => {
-    return apiRequest<User>(`/admin/users/${userId}/status`, {
+    return apiRequest<User>(`${ADMIN_PREFIX}/users/${userId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ 
         is_active: isActive, 
@@ -321,18 +322,18 @@ export const adminService = {
   },
 
   deleteUser: async (userId: number): Promise<void> => {
-    return apiRequest<void>(`/admin/users/${userId}`, {
+    return apiRequest<void>(`${ADMIN_PREFIX}/users/${userId}`, {
       method: 'DELETE',
     });
   },
 
   // Settings
   getSystemSettings: async (): Promise<SystemSettingItem[]> => {
-    return apiRequest<SystemSettingItem[]>('/admin/settings');
+    return apiRequest<SystemSettingItem[]>(`${ADMIN_PREFIX}/settings`);
   },
 
   updateSystemSettings: async (settings: SystemSettingItem[]): Promise<{ message: string }> => {
-    return apiRequest<{ message: string }>('/admin/settings', {
+    return apiRequest<{ message: string }>(`${ADMIN_PREFIX}/settings`, {
       method: 'PUT',
       body: JSON.stringify({ settings }),
     });
@@ -351,12 +352,12 @@ export const adminService = {
     if (userId) params.set('user_id', userId.toString());
     if (actionType) params.set('action_type', actionType);
     
-    return apiRequest<UsageLogsResponse>(`/admin/logs?${params}`);
+    return apiRequest<UsageLogsResponse>(`${ADMIN_PREFIX}/logs?${params}`);
   },
 
   // Export
   exportUsers: async (format: 'csv' | 'json' = 'csv'): Promise<Blob> => {
-    const response = await fetch(`${API_URL}/admin/users/export?format=${format}`, {
+    const response = await fetch(`${API_URL}${ADMIN_PREFIX}/users/export?format=${format}`, {
       headers: getHeaders(),
     });
     

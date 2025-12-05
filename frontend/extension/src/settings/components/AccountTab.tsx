@@ -44,13 +44,25 @@ const AccountTab: React.FC<AccountTabProps> = ({
     confirmPassword: "",
   });
 
-  const [localPrivacySettings, setLocalPrivacySettings] = useState<PrivacySettings>(privacySettings);
+  const [localPrivacySettings, setLocalPrivacySettings] = useState<PrivacySettings>({
+    ...privacySettings,
+    dataSharing: privacySettings.dataSharing ?? true,
+    analytics: privacySettings.analytics ?? true,
+    crashReports: false,
+    personalizedAds: false,
+  });
   const { language } = useLanguageContext();
   const tr = (vi: string, en: string) => (language === "vi" ? vi : en);
 
   // Update local state when props change
   useEffect(() => {
-    setLocalPrivacySettings(privacySettings);
+    setLocalPrivacySettings({
+      ...privacySettings,
+      dataSharing: privacySettings.dataSharing ?? true,
+      analytics: privacySettings.analytics ?? true,
+      crashReports: false,
+      personalizedAds: false,
+    });
   }, [privacySettings]);
 
   // Fetch subscription on mount
@@ -135,7 +147,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   const [linkedAccounts] = useState([
     { provider: "Google", connected: true, email: "user@gmail.com" },
     { provider: "Facebook", connected: false, email: "" },
-    { provider: "Apple", connected: false, email: "" },
+    { provider: "Phone", connected: false, email: "" },
   ]);
 
   const handlePasswordChange = () => {
@@ -205,6 +217,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   };
 
   const surface = "bg-white/90 dark:bg-slate-900/70 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800/70 backdrop-blur";
+  const unavailableProviders = ["Facebook", "Phone"];
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8" role="tabpanel" id="tabpanel-account" aria-labelledby="tab-account">
@@ -332,31 +345,48 @@ const AccountTab: React.FC<AccountTabProps> = ({
           {tr("Kết nối với các dịch vụ khác để đăng nhập dễ dàng", "Connect with other services for easier sign-in")}
         </p>
         <div className="space-y-3">
-          {linkedAccounts.map((account) => (
-            <div
-              key={account.provider}
-              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-            >
-              <div className="flex items-center space-x-3">
-                {getProviderIcon(account.provider)}
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{account.provider}</p>
-                  {account.connected && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{account.email}</p>
-                  )}
+          {linkedAccounts.map((account) => {
+            const isUnavailable = unavailableProviders.includes(account.provider);
+            const buttonLabel = isUnavailable
+              ? tr("Không khả dụng", "Unavailable")
+              : account.connected
+              ? tr("Ngắt kết nối", "Disconnect")
+              : tr("Kết nối", "Connect");
+            const buttonClass = isUnavailable
+              ? "bg-gray-300 text-gray-600 cursor-not-allowed dark:bg-gray-600 dark:text-gray-300"
+              : account.connected
+              ? "bg-red-500 hover:bg-red-600 text-white"
+              : "bg-blue-500 hover:bg-blue-600 text-white";
+
+            return (
+              <div
+                key={account.provider}
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+              >
+                <div className="flex items-center space-x-3">
+                  {getProviderIcon(account.provider)}
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">{account.provider}</p>
+                    {isUnavailable ? (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {tr("Hiện không khả dụng", "Currently unavailable")}
+                      </p>
+                    ) : (
+                      account.connected && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{account.email}</p>
+                      )
+                    )}
+                  </div>
                 </div>
+                <button
+                  disabled={isUnavailable}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${buttonClass}`}
+                >
+                  {buttonLabel}
+                </button>
               </div>
-              <button
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                account.connected
-                  ? "bg-red-500 hover:bg-red-600 text-white"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
-              }`}
-            >
-                {account.connected ? tr("Ngắt kết nối", "Disconnect") : tr("Kết nối", "Connect")}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -382,7 +412,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <input
               type="checkbox"
-              checked={localPrivacySettings.dataSharing}
+              checked={localPrivacySettings.dataSharing ?? true}
               onChange={(e) =>
                 setLocalPrivacySettings({ ...localPrivacySettings, dataSharing: e.target.checked })
               }
@@ -399,7 +429,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <input
               type="checkbox"
-              checked={localPrivacySettings.analytics}
+              checked={localPrivacySettings.analytics ?? true}
               onChange={(e) =>
                 setLocalPrivacySettings({ ...localPrivacySettings, analytics: e.target.checked })
               }
@@ -411,16 +441,14 @@ const AccountTab: React.FC<AccountTabProps> = ({
             <div>
               <p className="font-semibold text-gray-900 dark:text-white">{tr("Báo cáo lỗi", "Error reporting")}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {tr("Tự động gửi báo cáo lỗi để cải thiện", "Automatically send crash reports to improve quality")}
+                {tr("Tự động gửi báo cáo lỗi để cải thiện (không khả dụng)", "Automatically send crash reports to improve quality (unavailable)")}
               </p>
             </div>
             <input
               type="checkbox"
-              checked={localPrivacySettings.crashReports}
-              onChange={(e) =>
-                setLocalPrivacySettings({ ...localPrivacySettings, crashReports: e.target.checked })
-              }
-              className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              checked={false}
+              disabled
+              className="w-5 h-5 text-blue-600 rounded bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
             />
           </label>
 
@@ -428,16 +456,14 @@ const AccountTab: React.FC<AccountTabProps> = ({
             <div>
               <p className="font-semibold text-gray-900 dark:text-white">{tr("Quảng cáo cá nhân hóa", "Personalized ads")}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {tr("Nhận quảng cáo phù hợp với sở thích của bạn", "Receive ads tailored to your interests")}
+                {tr("Nhận quảng cáo phù hợp với sở thích của bạn (không khả dụng)", "Receive ads tailored to your interests (unavailable)")}
               </p>
             </div>
             <input
               type="checkbox"
-              checked={localPrivacySettings.personalizedAds}
-              onChange={(e) =>
-                setLocalPrivacySettings({ ...localPrivacySettings, personalizedAds: e.target.checked })
-              }
-              className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              checked={false}
+              disabled
+              className="w-5 h-5 text-blue-600 rounded bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
             />
           </label>
         </div>

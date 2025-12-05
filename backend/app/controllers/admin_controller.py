@@ -16,8 +16,10 @@ from app.schemas.admin import (
 from app.controllers.auth_controller import get_current_user
 from app.models.user import User
 
+# Note: prefix uses /api/admin to stay consistent with other API namespaces
+# and play nicely with production reverse proxies that forward /api/* to the backend.
 router = APIRouter(
-    prefix="/admin",
+    prefix="/api/admin",
     tags=["admin"],
     responses={404: {"description": "Not found"}},
 )

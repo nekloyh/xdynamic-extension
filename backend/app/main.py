@@ -52,13 +52,14 @@ def root():
         "version": settings.APP_VERSION,
         "status": "ok",
         "endpoints": {
-            "auth": "/api/auth",
-            "payment": "/api/payment",
-            "subscription": "/api/subscription",
-            "prediction": "/api/v1",
-            "docs": "/docs"
-        }
+        "auth": "/api/auth",
+        "payment": "/api/payment",
+        "subscription": "/api/subscription",
+        "prediction": "/api/v1",
+        "admin": "/api/admin",
+        "docs": "/docs"
     }
+}
 
 
 @app.get("/health")
