@@ -1,17 +1,89 @@
-version: '3.8'
+# ===================================
+# Docker Compose - XDynamic Backend
+# ===================================
+# Usage:
+#   Local:      docker compose up -d
+#   Production: docker compose --env-file .env.production up -d
 
 services:
-  api:
-    # image: nvashinki/xdynamic-api:prod
-    image: nvashinki/xdynamic-api:cpu
-    container_name: xdynamic-api
+  # ===== Backend API =====
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xdynamic-api:latest
+    container_name: xdynamic-backend
     restart: unless-stopped
+    
     ports:
-      - "8001:8000"
-    volumes:
-      - ./data:/app/data
+      - "${API_PORT:-8000}:8000"
+    
     env_file:
       - .env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - DEBUG=false
+    
+    volumes:
+      - backend-data:/app/data
+      # Mount frontend static files for serving
+      - ../frontend/callback-pages:/app/frontend/callback-pages:ro
+      - ../frontend/admin-dashboard/dist:/app/frontend/admin-dashboard/dist:ro
+    
+    networks:
+      - xdynamic-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ===== Nginx Reverse Proxy (Optional - for production) =====
+  nginx:
+    image: nginx:alpine
+    container_name: xdynamic-nginx
+    restart: unless-stopped
+    profiles:
+      - production  # Only start with --profile production
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../frontend/admin-dashboard/dist:/var/www/admin:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./nginx/logs:/var/log/nginx
+    
+    networks:
+      - xdynamic-network
+    
+    depends_on:
+      - backend
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  xdynamic-network:
+    driver: bridge
+    name: xdynamic-network
+
+volumes:
+  backend-data:
+    name: xdynamic-data

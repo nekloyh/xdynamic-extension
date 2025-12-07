@@ -1,0 +1,1 @@
+import{l as o}from"./api-wkYwro2i.js";import{w as e}from"./global-C2rMECik.js";const s=()=>{try{window.opener?(window.close(),o.debug("Window closed successfully")):(o.debug("Cannot close window, redirecting to dashboard"),window.location.href=e("DASHBOARD"))}catch(r){o.error("Failed to close window, redirecting to dashboard",r),window.location.href=e("DASHBOARD")}};export{s};

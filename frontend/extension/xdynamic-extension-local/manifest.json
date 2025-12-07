@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "XDynamic Extension",
+  "version": "1.0.0",
+  "description": "An extension for NSFW content detection and filtering for safer browsing",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "tabs",
+    "contextMenus",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "service-worker-loader.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "assets/index.ts-loader-Dy6iRL5m.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "XDynamic Extension",
+    "default_icon": {
+      "32": "icons/default_icon-32.png",
+      "64": "icons/default_icon-64.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "options_ui": {
+    "page": "src/dashboard/index.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "icons/*.png",
+        "assets/*.css",
+        "assets/*.js",
+        "src/plan/index.html",
+        "src/settings/index.html",
+        "src/dashboard/index.html",
+        "src/payment/index.html",
+        "src/report/index.html",
+        "src/onboarding/index.html",
+        "src/login/index.html",
+        "assets/api-wkYwro2i.js",
+        "assets/detection.service-CmiuAIyB.js",
+        "assets/index.ts-DmZxu4K0.js"
+      ],
+      "use_dynamic_url": false
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline';"
+  }
+}
