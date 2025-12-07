@@ -5,7 +5,6 @@ import { AuthGuard } from './components/AuthGuard';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { Dashboard } from './pages/Dashboard';
 import { UserManagement } from './pages/UserManagement';
-import { ContentAnalytics } from './pages/ContentAnalytics';
 import { SystemSettings } from './pages/SystemSettings';
 import { Reports } from './pages/Reports';
 import { AITraining } from './pages/AITraining';
@@ -35,14 +34,6 @@ const App: React.FC = () => {
               element={
                 <AuthGuard>
                   <UserManagement />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <AuthGuard>
-                  <ContentAnalytics />
                 </AuthGuard>
               }
             />

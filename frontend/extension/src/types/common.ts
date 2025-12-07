@@ -124,7 +124,6 @@ export interface UserProfile {
   email: string;
   phone?: string;
   avatar?: string;
-  phone?: string;
   plan: string;
   planType: PlanType;
   credits?: number;

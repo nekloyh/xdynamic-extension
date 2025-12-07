@@ -50,12 +50,17 @@ cd xdynamic-extension
 - OAuth: `/api/auth/google/callback` -> `APP_URL/auth/callback`; frontend gọi `/api/auth/google`
 - Payment: `/api/payment/success` -> `APP_URL/payment/success`
 
-## Docker (backend)
+## Docker (Production Backend)
 ```bash
 cd backend
-docker-compose up -d
+
+# Build image
+docker build -f Dockerfile.prod -t xdynamic-api:latest .
+
+# Run
+docker-compose -f docker-compose.prod.yaml up -d
 ```
-Backend sẽ chạy tại: **http://localhost:8001**
+Backend sẽ chạy tại: **http://localhost:8000** hoặc **https://app.xdynamic.cloud** (production)
 
 ## Cấu trúc thư mục
 ```

@@ -82,48 +82,26 @@ const LoginApp: React.FC = () => {
     }
   };
 
-  const handleFacebookLogin = async () => {
-    setIsLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const userData = {
-        id: "fb-user-" + Date.now(),
-        email: "user@facebook.com",
-        fullName: "Facebook User",
-        hasCompletedOnboarding: true,
-      };
-
-      signIn(userData);
-      navigateToPage("DASHBOARD");
-    } catch (error) {
-      logger.error("Facebook login failed", error);
-      alert(t("login.error.facebook", "Đăng nhập Facebook thất bại."));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const userData = {
-        id: "phone-user-" + Date.now(),
-        email: "user@phone.com",
-        fullName: "Phone User",
+        id: "gmail-user-" + Date.now(),
+        email: "user@gmail.com",
+        fullName: "Gmail User",
         hasCompletedOnboarding: true,
       };
 
       signIn(userData);
       navigateToPage("DASHBOARD");
     } catch (error) {
-      logger.error("Phone login failed", error);
+      logger.error("Gmail login failed", error);
       alert(
         t(
-          "login.error.phone",
-          "Đăng nhập bằng số điện thoại thất bại."
+          "login.error.google",
+          "Đăng nhập bằng Gmail thất bại."
         )
       );
     } finally {
@@ -258,7 +236,6 @@ const LoginApp: React.FC = () => {
     <>
       <LoginScreen
         onLogin={handleLogin}
-        onFacebookLogin={handleFacebookLogin}
         onGoogleLogin={handleGoogleLogin}
         onForgotPassword={handleForgotPassword}
         onCreateAccount={handleCreateAccount}

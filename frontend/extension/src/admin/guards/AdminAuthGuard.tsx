@@ -3,6 +3,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { API_CONFIG } from '../../core/config/api';
 
+const ADMIN_PREFIX = '/api/admin';
+
 export const AdminAuthGuard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -17,7 +19,7 @@ export const AdminAuthGuard: React.FC = () => {
         try {
           // Verify admin status by calling a lightweight admin endpoint
           const token = await authService.getAuthToken();
-          const response = await fetch(`${API_CONFIG.BASE_URL}/admin/stats/overview`, {
+          const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/stats/overview`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,

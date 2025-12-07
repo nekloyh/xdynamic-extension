@@ -1,6 +1,8 @@
 import { API_CONFIG } from '../../core/config/api';
 import { authService } from '../../services/auth.service';
 
+const ADMIN_PREFIX = '/api/admin';
+
 export interface OverviewStats {
   total_users: number;
   active_today: number;
@@ -61,7 +63,7 @@ class AdminService {
   }
 
   async getOverviewStats(): Promise<OverviewStats> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/stats/overview`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/stats/overview`, {
       headers: await this.getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch overview stats');
@@ -69,7 +71,7 @@ class AdminService {
   }
 
   async getUsageStats(range: string = '30d'): Promise<UsageStats> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/stats/usage?range=${range}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/stats/usage?range=${range}`, {
       headers: await this.getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch usage stats');
@@ -77,7 +79,7 @@ class AdminService {
   }
 
   async getAccuracyStats(range: string = '30d'): Promise<AccuracyStats> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/stats/accuracy?range=${range}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/stats/accuracy?range=${range}`, {
       headers: await this.getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch accuracy stats');
@@ -85,7 +87,7 @@ class AdminService {
   }
 
   async getTopCategories(range: string = '30d'): Promise<TopCategory[]> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/stats/top-categories?range=${range}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/stats/top-categories?range=${range}`, {
       headers: await this.getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch top categories');
@@ -93,7 +95,7 @@ class AdminService {
   }
 
   async getRecentActivities(limit: number = 5): Promise<Activity[]> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/activities?limit=${limit}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/activities?limit=${limit}`, {
       headers: await this.getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch recent activities');
@@ -116,7 +118,7 @@ class AdminService {
     if (params.category) query.append('category', params.category);
     if (params.search) query.append('search', params.search);
 
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/reports?${query.toString()}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/reports?${query.toString()}`, {
       headers: await this.getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch reports');
@@ -124,7 +126,7 @@ class AdminService {
   }
 
   async handleReportAction(reportIds: string[], action: 'approve' | 'reject' | 'review'): Promise<any> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/admin/reports/action`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${ADMIN_PREFIX}/reports/action`, {
       method: 'POST',
       headers: await this.getHeaders(),
       body: JSON.stringify({ report_ids: reportIds, action }),

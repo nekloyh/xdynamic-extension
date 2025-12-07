@@ -58,13 +58,9 @@ export const translations: Translations = {
     en: "Please sign in to use the extension",
     vi: "Vui lòng đăng nhập để sử dụng tiện ích",
   },
-  "auth.withFacebook": {
-    en: "Continue with Facebook",
-    vi: "Tiếp tục với Facebook",
-  },
-  "auth.withPhone": {
-    en: "Continue with phone",
-    vi: "Tiếp tục với số điện thoại",
+  "auth.withGmail": {
+    en: "Continue with Gmail",
+    vi: "Tiếp tục với Gmail",
   },
   "auth.noAccount": {
     en: "Don't have an account?",
@@ -197,13 +193,9 @@ export const translations: Translations = {
     en: "Login failed. Please check your email and password.",
     vi: "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.",
   },
-  "login.error.facebook": {
-    en: "Facebook login failed.",
-    vi: "Đăng nhập Facebook thất bại.",
-  },
-  "login.error.phone": {
-    en: "Phone login failed.",
-    vi: "Đăng nhập bằng số điện thoại thất bại.",
+  "login.error.google": {
+    en: "Gmail login failed.",
+    vi: "Đăng nhập bằng Gmail thất bại.",
   },
   "login.reset.sent": {
     en: "Password reset instructions sent to {email}.",

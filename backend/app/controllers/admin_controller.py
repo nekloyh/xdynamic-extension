@@ -7,7 +7,8 @@ from app.services.admin_service import AdminService
 from app.schemas.admin import (
     OverviewStats, UsageStats, AccuracyStats, TopCategory, 
     Activity, Report, ReportAction,
-    AdminUserList, AdminUserUpdate, SystemSettingItem, SystemSettingsUpdate
+    AdminUserList, AdminUserUpdate, SystemSettingItem, SystemSettingsUpdate,
+    ChartsData, RevenueOvertime, NewUsersOvertime, UserPredictCallsList, UserPaymentTotalList
 )
 # Assuming there is a get_current_user dependency, likely in app.controllers.auth_controller or app.middleware
 # Based on user_controller.py check, I will find out where it is.
@@ -15,8 +16,10 @@ from app.schemas.admin import (
 from app.controllers.auth_controller import get_current_user
 from app.models.user import User
 
+# Note: prefix uses /api/admin to stay consistent with other API namespaces
+# and play nicely with production reverse proxies that forward /api/* to the backend.
 router = APIRouter(
-    prefix="/admin",
+    prefix="/api/admin",
     tags=["admin"],
     responses={404: {"description": "Not found"}},
 )
@@ -80,6 +83,15 @@ def get_reports(
     return AdminService.get_reports(db, page, limit, status, date_range, category, search)
 
 
+@router.get("/stats/charts", response_model=ChartsData)
+def get_charts_data(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get revenue and user registration data for charts"""
+    return AdminService.get_charts_data(db, days)
+
 
 @router.get("/users", response_model=AdminUserList)
 def get_users(
@@ -127,3 +139,49 @@ def update_system_settings(
     current_user: User = Depends(get_current_admin)
 ):
     return AdminService.update_system_settings(db, settings_update)
+
+
+# ===== NEW ANALYTICS ENDPOINTS =====
+
+@router.get("/stats/revenue-overtime", response_model=RevenueOvertime)
+def get_revenue_overtime(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get daily and cumulative revenue over time"""
+    return AdminService.get_revenue_overtime(db, days)
+
+
+@router.get("/stats/new-users-overtime", response_model=NewUsersOvertime)
+def get_new_users_overtime(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get new user registrations over time (sorted descending)"""
+    return AdminService.get_new_users_overtime(db, days)
+
+
+@router.get("/stats/user-predict-calls", response_model=UserPredictCallsList)
+def get_user_predict_calls(
+    page: int = 1,
+    limit: int = 10,
+    sort_desc: bool = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get total predict API calls per user"""
+    return AdminService.get_user_predict_calls(db, page, limit, sort_desc)
+
+
+@router.get("/stats/user-payments", response_model=UserPaymentTotalList)
+def get_user_payment_totals(
+    page: int = 1,
+    limit: int = 10,
+    sort_desc: bool = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """Get total payment amount per user"""
+    return AdminService.get_user_payment_totals(db, page, limit, sort_desc)

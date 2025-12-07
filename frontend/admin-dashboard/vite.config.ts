@@ -4,6 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/', // Root base since it's served at /admin by backend
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -13,4 +14,6 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
+  // Load environment variables based on NODE_ENV or custom env
+  envPrefix: 'VITE_',
 });

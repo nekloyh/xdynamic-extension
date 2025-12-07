@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Checkbox } from "../../components/ui/checkbox";
 import { Label } from "../../components/ui/label";
 import { Separator } from "../../components/ui/separator";
-import { Loader2, Eye, EyeOff, Facebook, Smartphone } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { useLanguageContext } from "../../providers/LanguageProvider";
 import { isValidEmail } from "../../utils";
 
 interface LoginScreenProps {
   onLogin: (email: string, password: string, rememberMe: boolean) => void;
-  onFacebookLogin: () => void;
   onGoogleLogin: () => void;
   onForgotPassword: () => void;
   onCreateAccount: () => void;
@@ -20,7 +19,6 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({
   onLogin,
-  onFacebookLogin,
   onGoogleLogin,
   onForgotPassword,
   onCreateAccount,
@@ -171,21 +169,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
             <Button
               type="button"
               variant="outline"
-              onClick={onFacebookLogin}
-              className="w-full"
-            >
-              <Facebook className="mr-2 h-4 w-4" />
-              {t("auth.withFacebook", "Tiếp tục với Facebook")}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
               onClick={onGoogleLogin}
               className="w-full"
             >
-              <Smartphone className="mr-2 h-4 w-4" />
-              {t("auth.withPhone", "Tiếp tục với số điện thoại")}
+              <Mail className="mr-2 h-4 w-4" />
+              {t("auth.withGmail", "Tiếp tục với Gmail")}
             </Button>
           </div>
 

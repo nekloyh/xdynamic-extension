@@ -5,9 +5,7 @@ import {
   Ban,
   Gauge,
   HardDrive,
-  RefreshCw,
   ShieldCheck,
-  ShieldOff,
   Sparkles,
   Wifi,
 } from "lucide-react";
@@ -66,17 +64,6 @@ type DashboardCopy = {
     upgrade: string;
     report: string;
   };
-  stats: {
-    title: string;
-    blocked: string;
-    uptime: string;
-    scanned: string;
-    updated: string;
-  };
-  score: {
-    title: string;
-    caption: string;
-  };
 };
 
 const copy: Record<Language, DashboardCopy> = {
@@ -97,7 +84,7 @@ const copy: Record<Language, DashboardCopy> = {
     },
     settings: {
       title: "Cài đặt bảo vệ",
-      badge: "Tuỳ chỉnh nhanh",
+      badge: "Tùy chỉnh nhanh",
       realtimeTitle: "Bảo vệ thời gian thực",
       realtimeDescription: "Quét và chặn ngay lập tức",
       autoUpdateTitle: "Tự động cập nhật",
@@ -110,37 +97,26 @@ const copy: Record<Language, DashboardCopy> = {
       items: [
         {
           title: "Đã chặn nội dung không phù hợp",
-          subtitle: "facebook.com • 2 phút trước",
+          subtitle: "facebook.com · 2 phút trước",
         },
         {
           title: "Cảnh báo trang web nghi vấn",
-          subtitle: "example-ads.com • 5 phút trước",
+          subtitle: "example-ads.com · 5 phút trước",
         },
         {
           title: "Cập nhật quy tắc bảo vệ",
-          subtitle: "Hệ thống • 10 phút trước",
+          subtitle: "Hệ thống · 10 phút trước",
         },
       ],
     },
     quick: {
       title: "Thao tác nhanh",
       badge: "Ưu tiên",
-      premiumTitle: "Mở khoá Premium",
+      premiumTitle: "Mở khóa Premium",
       premiumDescription:
         "Không giới hạn dung lượng, bảo vệ AI nâng cao, hỗ trợ 24/7.",
       upgrade: "Nâng cấp ngay",
       report: "Báo cáo vấn đề",
-    },
-    stats: {
-      title: "Thống kê chi tiết",
-      blocked: "Tổng mối đe doạ đã chặn",
-      uptime: "Thời gian hoạt động",
-      scanned: "Trang web đã quét",
-      updated: "Cập nhật cuối",
-    },
-    score: {
-      title: "Điểm hiệu suất",
-      caption: "Xuất sắc",
     },
   },
   en: {
@@ -173,15 +149,15 @@ const copy: Record<Language, DashboardCopy> = {
       items: [
         {
           title: "Blocked unsafe content",
-          subtitle: "facebook.com · 2 mins ago",
+          subtitle: "facebook.com ú 2 mins ago",
         },
         {
           title: "Suspicious site warning",
-          subtitle: "example-ads.com · 5 mins ago",
+          subtitle: "example-ads.com ú 5 mins ago",
         },
         {
           title: "Protection rules updated",
-          subtitle: "System · 10 mins ago",
+          subtitle: "System ú 10 mins ago",
         },
       ],
     },
@@ -193,17 +169,6 @@ const copy: Record<Language, DashboardCopy> = {
         "Unlimited quota, advanced AI protection, 24/7 support.",
       upgrade: "Upgrade now",
       report: "Report an issue",
-    },
-    stats: {
-      title: "Detailed stats",
-      blocked: "Total threats blocked",
-      uptime: "Uptime",
-      scanned: "Pages scanned",
-      updated: "Last updated",
-    },
-    score: {
-      title: "Performance score",
-      caption: "Excellent",
     },
   },
 };
@@ -228,7 +193,7 @@ const surface = "rounded-lg border border-border bg-card shadow-sm";
 const DashboardTab: React.FC<DashboardTabProps> = ({
   metrics,
   stats,
-  userProfile,
+  userProfile: _userProfile,
   onUpgrade,
   onRefresh,
   onToggleProtection,
@@ -283,18 +248,6 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
     Number.isFinite(val)
       ? val.toLocaleString(locale, { maximumFractionDigits: usageUnitLabel === "lan" ? 0 : 1 })
       : "0";
-
-  const uptimeDisplay =
-    typeof stats.uptimePercent === "number"
-      ? `${stats.uptimePercent.toFixed(1)}%`
-      : realtimeData.uptime;
-
-  const totalScansDisplay =
-    typeof stats.totalScans === "number" ? stats.totalScans.toLocaleString(locale) : "1,247";
-
-  const lastUpdatedDisplay = stats.lastUpdatedAt
-    ? new Date(stats.lastUpdatedAt).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })
-    : text.labels.today;
 
   const usageChange = text.cards.usageChange(Math.max(0, metrics.usagePercentage - 60));
 
@@ -478,42 +431,6 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
               </RippleButton>
             </div>
           </div>
-
-          <div className={`${surface} p-6`}>
-            <h3 className="mb-4 text-lg font-semibold text-foreground">{text.stats.title}</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{text.stats.blocked}</span>
-                <span className="font-semibold text-foreground">{stats.totalBlocked}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{text.stats.uptime}</span>
-                <span className="font-semibold text-emerald-600">{uptimeDisplay}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{text.stats.scanned}</span>
-                <span className="font-semibold text-foreground">{totalScansDisplay}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{text.stats.updated}</span>
-                <span className="font-semibold text-foreground">{lastUpdatedDisplay}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-blue-50 dark:from-emerald-900/40 dark:to-blue-900/30 dark:border-emerald-700/60 p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Gauge className="h-5 w-5 text-green-600 dark:text-emerald-200" />
-              <h3 className="text-lg font-semibold text-foreground">{text.score.title}</h3>
-            </div>
-            <div className="text-center">
-              <div className="mb-2 text-4xl font-bold text-green-600 dark:text-emerald-200">98</div>
-              <p className="mb-4 text-sm text-muted-foreground">{text.score.caption}</p>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-green-600 dark:bg-emerald-300" style={{ width: "98%" }} />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -521,4 +438,3 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
 };
 
 export default React.memo(DashboardTab);
-

@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
-  BarChart3, 
   Settings,
   FileText,
   Shield,
@@ -14,7 +13,6 @@ import clsx from 'clsx';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'User Management', href: '/users', icon: Users },
-  { name: 'Content Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'AI Training', href: '/ai-training', icon: Users },
   { name: 'System Settings', href: '/settings', icon: Settings },

@@ -14,7 +14,7 @@ import {
   AdvancedSkeleton,
 } from "./components/SkeletonLoader";
 import { ConfirmationModal, Toast } from "../components/common";
-import { UserProfile, DashboardMetrics, SecuritySettings, PrivacySettings, UserStatistics } from "../types/common";
+import { UserProfile, DashboardMetrics, SecuritySettings, PrivacySettings, UserStatistics, ActivityLog } from "../types/common";
 import { DEFAULTS, EXTERNAL_LINKS, logger, navigateToPage, navigateToPageInCurrentTab, STORAGE_KEYS } from "../utils";
 import { userService } from "../services/user.service";
 import { authService } from "../services/auth.service";
@@ -61,6 +61,7 @@ const UserHub: React.FC = () => {
     exporting: false,
     importing: false,
   });
+  const [sessionLogs, setSessionLogs] = useState<ActivityLog[]>([]);
 
   // Persist last tab locally so it re-opens without hash fragments
   useEffect(() => {
@@ -276,6 +277,17 @@ const UserHub: React.FC = () => {
 
   const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
     setToast({ isVisible: true, message, type });
+
+    const level: ActivityLog["level"] =
+      type === "error" ? "error" : type === "warning" ? "warning" : "info";
+    const logEntry: ActivityLog = {
+      id: `session-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      details: "",
+    };
+    setSessionLogs((prev) => [...prev.slice(-49), logEntry]);
   };
 
   const hideToast = () => {
@@ -399,7 +411,7 @@ const UserHub: React.FC = () => {
       }
 
       logger.info("Protection toggled:", enabled);
-      showToast(`Đã ${enabled ? "bật" : "tắt"} bảo vệ thời gian thực`, "success");
+      showToast(enabled ? "Bao ve da duoc bat" : "Bao ve da duoc tat", "success");
     } catch (error) {
       logger.error("Failed to toggle protection:", error);
       // Revert on failure
@@ -512,14 +524,12 @@ const UserHub: React.FC = () => {
     setIsLoading(prev => ({ ...prev, exporting: true }));
     try {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing
-      logger.info("Exporting settings as:", format);
+      logger.info("Exporting security settings as:", format);
       
       const exportData = {
-        userProfile,
         securitySettings,
-        dashboardMetrics,
         exportedAt: new Date().toISOString(),
-        version: "1.0.0"
+        version: "1.0.0",
       };
 
       const dataStr = format === "json" 
@@ -533,16 +543,15 @@ const UserHub: React.FC = () => {
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `xdynamic-userhub-${new Date().toISOString().split('T')[0]}.${format}`;
+      link.download = `xdynamic-security-${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
-      showToast(`Dữ liệu đã được xuất thành công dưới dạng ${format.toUpperCase()}!`, "success");
+      showToast(`Cai dat bao mat da duoc xuat dang ${format.toUpperCase()}`, "success");
     } catch (error) {
-      logger.error("Failed to export settings:", error);
-      showToast("Có lỗi xảy ra khi xuất dữ liệu. Vui lòng thử lại.", "error");
+      logger.error("Failed to export security settings:", error);
+      showToast("Da xay ra loi khi xuat cai dat bao mat. Vui long thu lai.", "error");
     } finally {
       setIsLoading(prev => ({ ...prev, exporting: false }));
     }
@@ -591,22 +600,23 @@ const UserHub: React.FC = () => {
         throw new Error('Unsupported file format');
       }
 
-      // Validate and apply imported settings
-      if (importedData.securitySettings) {
-        setSecuritySettings(importedData.securitySettings);
+      // Validate and apply imported settings (security only)
+      const importedSecurity =
+        importedData && typeof importedData === "object" && importedData.securitySettings
+          ? importedData.securitySettings
+          : importedData;
+
+      if (!importedSecurity || typeof importedSecurity !== "object") {
+        throw new Error("Invalid security settings payload");
       }
-      if (importedData.userProfile) {
-        setUserProfile(prev => ({ ...prev, ...importedData.userProfile }));
-      }
-      if (importedData.dashboardMetrics) {
-        setDashboardMetrics(prev => ({ ...prev, ...importedData.dashboardMetrics }));
-      }
+
+      setSecuritySettings(prev => ({ ...prev, ...importedSecurity }));
       
-      logger.info("Settings imported successfully from:", file.name);
-      showToast("Dữ liệu đã được nhập thành công!", "success");
+      logger.info("Security settings imported successfully from:", file.name);
+      showToast("Da nhap cai dat bao mat thanh cong!", "success");
     } catch (error) {
-      logger.error("Failed to import settings:", error);
-      showToast("Có lỗi xảy ra khi nhập dữ liệu. Vui lòng kiểm tra file và thử lại.", "error");
+      logger.error("Failed to import security settings:", error);
+      showToast("Da xay ra loi khi nhap cai dat bao mat. Vui long kiem tra file va thu lai.", "error");
     } finally {
       setIsLoading(prev => ({ ...prev, importing: false }));
     }
@@ -831,14 +841,14 @@ const UserHub: React.FC = () => {
                 />
               )}
               {activeTab === "advanced" && (
-                <AdvancedTab
-                  onExportSettings={handleExportSettings}
-                  onImportSettings={handleImportSettings}
-                  isLoading={isLoading}
-                  customFilters={securitySettings.customFilters}
-                  vpnEnabled={securitySettings.vpnEnabled}
-                  onUpdateSecurity={(updates) => handleSaveSecuritySettings({ ...securitySettings, ...updates })}
-                />
+              <AdvancedTab
+                onExportSettings={handleExportSettings}
+                onImportSettings={handleImportSettings}
+                isLoading={isLoading}
+                vpnEnabled={securitySettings.vpnEnabled}
+                onUpdateSecurity={(updates) => handleSaveSecuritySettings({ ...securitySettings, ...updates })}
+                sessionLogs={sessionLogs}
+              />
               )}
               {activeTab === "account" && (
                 <AccountTab
@@ -899,4 +909,3 @@ const UserHub: React.FC = () => {
 };
 
 export default React.memo(UserHub);
-

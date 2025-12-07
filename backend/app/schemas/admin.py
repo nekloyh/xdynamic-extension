@@ -7,13 +7,22 @@ class OverviewStats(BaseModel):
     total_users: int
     active_today: int
     content_blocked: int
-    pending_reports: int
     total_revenue: float
     blocked_images_count: int
 
 class UsageDataPoint(BaseModel):
     date: str
     value: int
+
+class ChartDataPoint(BaseModel):
+    date: str
+    revenue: float
+    users: int
+
+class ChartsData(BaseModel):
+    data: List[ChartDataPoint]
+    total_revenue: float
+    total_users: int
 
 class UsageStats(BaseModel):
     usage_over_time: List[UsageDataPoint]
@@ -88,3 +97,49 @@ class SystemSettingItem(BaseModel):
 
 class SystemSettingsUpdate(BaseModel):
     settings: List[SystemSettingItem]
+
+
+# ===== NEW ANALYTICS SCHEMAS =====
+
+class RevenueDataPoint(BaseModel):
+    date: str
+    daily_revenue: float
+    cumulative_revenue: float
+
+class RevenueOvertime(BaseModel):
+    data: List[RevenueDataPoint]
+    total_revenue: float
+
+class NewUsersDataPoint(BaseModel):
+    date: str
+    count: int
+    cumulative_count: int
+
+class NewUsersOvertime(BaseModel):
+    data: List[NewUsersDataPoint]
+    total_users: int
+
+class UserPredictCalls(BaseModel):
+    user_id: int
+    email: str
+    name: Optional[str]
+    total_calls: int
+
+class UserPredictCallsList(BaseModel):
+    data: List[UserPredictCalls]
+    total: int
+    page: int
+    limit: int
+
+class UserPaymentTotal(BaseModel):
+    user_id: int
+    email: str
+    name: Optional[str]
+    total_amount: float
+    transaction_count: int
+
+class UserPaymentTotalList(BaseModel):
+    data: List[UserPaymentTotal]
+    total: int
+    page: int
+    limit: int

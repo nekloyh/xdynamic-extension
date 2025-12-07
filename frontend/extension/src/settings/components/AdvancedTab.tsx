@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import clsx from "clsx";
-import { AlertCircle, AlertTriangle, CheckCircle2, Info, RefreshCw } from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, RefreshCw } from "lucide-react";
 import { LogLevel, ActivityLog, SecuritySettings } from "../../types/common";
 import SettingToggle from "./SettingToggle";
 import { useLanguageContext } from "../../providers/LanguageProvider";
@@ -98,7 +98,7 @@ const copy: Record<
       importing: "Đang nhập...",
       uploading: "Đang tải lên...",
     },
-    logs: { title: "Logs & chẩn đoán", level: "Mức log", filters: ["Tất cả", "Cảnh báo", "Thông tin", "Debug"], empty: "Không có log nào" },
+    logs: { title: "Logs & chẩn đoán", level: "Mức log", filters: ["Tất cả", "Lỗi", "Cảnh báo", "Thông tin"], empty: "Không có log nào" },
     toggles: {
       vpn: "Bật/Tắt VPN",
       alerts: "Cảnh báo email & toast",
@@ -115,21 +115,7 @@ const copy: Record<
     buttons: { exportJson: "JSON", exportCsv: "CSV", viewMore: "Xem thêm" },
     activity: [
       {
-        id: "1",
-        timestamp: new Date().toISOString(),
-        level: "error",
-        message: "Không thể cập nhật bộ lọc",
-        details: "Failed to update filter database",
-      },
-      {
-        id: "2",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        level: "warning",
-        message: "Phát hiện 5 mối đe doạ",
-        details: "5 threats detected and blocked",
-      },
-      {
-        id: "3",
+        id: "info-realtime",
         timestamp: new Date(Date.now() - 7200000).toISOString(),
         level: "info",
         message: "Bảo vệ thời gian thực đã được bật",
@@ -138,32 +124,11 @@ const copy: Record<
     ],
     hardened: [
       {
-        id: "err-purchase",
-        timestamp: new Date().toISOString(),
-        level: "error",
-        message: "Thanh toán thất bại: không đủ tiền trong tài khoản",
-        details: "Purchase PRO plan bị từ chối do số dư không đủ",
-      },
-      {
-        id: "warn-csrf",
-        timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-        level: "warning",
-        message: "Cảnh báo CSRF cho domain lạ",
-        details: "Chặn cookie cross-site khả nghi từ mail-ads.biz",
-      },
-      {
         id: "info-sync",
-        timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+        timestamp: new Date("2025-11-30T00:00:00Z").toISOString(),
         level: "info",
         message: "Đồng bộ cài đặt thành công",
         details: "Đồng bộ quy tắc bảo vệ với popup & dashboard",
-      },
-      {
-        id: "info-export",
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        level: "info",
-        message: "Đã xuất cài đặt",
-        details: "Tải xuống file cấu hình JSON",
       },
     ],
   },
@@ -187,7 +152,7 @@ const copy: Record<
       importing: "Importing...",
       uploading: "Uploading...",
     },
-    logs: { title: "Logs & diagnostics", level: "Log level", filters: ["All", "Warnings", "Info", "Debug"], empty: "No logs available" },
+    logs: { title: "Logs & diagnostics", level: "Log level", filters: ["All", "Error", "Warnings", "Info"], empty: "No logs available" },
     toggles: {
       vpn: "Toggle VPN",
       alerts: "Email & toast alerts",
@@ -204,21 +169,7 @@ const copy: Record<
     buttons: { exportJson: "JSON", exportCsv: "CSV", viewMore: "View more" },
     activity: [
       {
-        id: "1",
-        timestamp: new Date().toISOString(),
-        level: "error",
-        message: "Unable to update filters",
-        details: "Failed to update filter database",
-      },
-      {
-        id: "2",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        level: "warning",
-        message: "Detected 5 threats",
-        details: "5 threats detected and blocked",
-      },
-      {
-        id: "3",
+        id: "info-realtime",
         timestamp: new Date(Date.now() - 7200000).toISOString(),
         level: "info",
         message: "Real-time protection enabled",
@@ -227,32 +178,11 @@ const copy: Record<
     ],
     hardened: [
       {
-        id: "err-purchase",
-        timestamp: new Date().toISOString(),
-        level: "error",
-        message: "Payment failed: insufficient balance",
-        details: "Purchase PRO plan was declined due to low balance",
-      },
-      {
-        id: "warn-csrf",
-        timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-        level: "warning",
-        message: "CSRF warning for unfamiliar domain",
-        details: "Blocked suspicious cross-site cookie from mail-ads.biz",
-      },
-      {
         id: "info-sync",
-        timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+        timestamp: new Date("2025-11-30T00:00:00Z").toISOString(),
         level: "info",
         message: "Settings synced successfully",
         details: "Synced protection rules with popup & dashboard",
-      },
-      {
-        id: "info-export",
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        level: "info",
-        message: "Settings exported",
-        details: "Downloaded JSON config file",
       },
     ],
   },
@@ -267,35 +197,23 @@ interface AdvancedTabProps {
     exporting: boolean;
     importing: boolean;
   };
-  customFilters: string[];
   vpnEnabled?: boolean;
   onUpdateSecurity: (updates: Partial<SecuritySettings>) => void;
+  sessionLogs: ActivityLog[];
 }
 
 const AdvancedTab: React.FC<AdvancedTabProps> = ({
   onExportSettings,
   onImportSettings,
   isLoading = { saving: false, resetting: false, exporting: false, importing: false },
-  customFilters,
   vpnEnabled = false,
   onUpdateSecurity,
+  sessionLogs,
 }) => {
   const { language } = useLanguageContext();
   const text = copy[language];
 
   const [logLevel, setLogLevel] = useState<LogLevel>("debug");
-  const [newFilter, setNewFilter] = useState("");
-
-  const handleAddFilter = () => {
-    if (newFilter.trim() && !customFilters.includes(newFilter.trim())) {
-      onUpdateSecurity({ customFilters: [...customFilters, newFilter.trim()] });
-      setNewFilter("");
-    }
-  };
-
-  const handleRemoveFilter = (filter: string) => {
-    onUpdateSecurity({ customFilters: customFilters.filter((f) => f !== filter) });
-  };
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -306,9 +224,13 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
 
   const activityLogs: ActivityLog[] = text.activity;
   const hardenedLogs: ActivityLog[] = text.hardened;
+  const combinedLogs = [...sessionLogs, ...activityLogs, ...hardenedLogs];
+  const sortedLogs = combinedLogs.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 
   const visibleLogs =
-    logLevel === "debug" ? hardenedLogs : hardenedLogs.filter((log) => log.level === logLevel);
+    logLevel === "debug" ? sortedLogs : sortedLogs.filter((log) => log.level === logLevel);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8" role="tabpanel" id="tabpanel-advanced" aria-labelledby="tab-advanced">
@@ -337,47 +259,6 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
             onChange={(next) => onUpdateSecurity({ vpnEnabled: next })}
             aria-label={text.vpn.aria}
           />
-        </div>
-
-        <div className="mb-6">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{text.filters.title}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{text.filters.desc}</p>
-          <div className="flex space-x-2 mb-4">
-            <input
-              type="text"
-              value={newFilter}
-              onChange={(e) => setNewFilter(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleAddFilter()}
-              placeholder={text.filters.placeholder}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            />
-            <button
-              onClick={handleAddFilter}
-              className="px-4 py-2 rounded-lg font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20"
-              aria-label={text.filters.add}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {customFilters.map((filter) => (
-              <div key={filter} className={`flex items-center justify-between p-3 ${softSurface}`}>
-                <span className="font-mono text-sm text-gray-900 dark:text-white">{filter}</span>
-                <button
-                  onClick={() => handleRemoveFilter(filter)}
-                  className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 rounded transition-colors"
-                  aria-label="Remove filter"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="border-t border-slate-200/70 dark:border-slate-800/70 pt-6">
@@ -465,7 +346,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
             <p className="text-sm text-gray-600 dark:text-gray-400">{text.logs.level}</p>
           </div>
           <div className="flex gap-2 items-center">
-            {(["debug", "warning", "info"] as LogLevel[]).map((level, idx) => (
+            {(["debug", "error", "warning", "info"] as LogLevel[]).map((level, idx) => (
               <button
                 key={level}
                 onClick={() => setLogLevel(level)}
@@ -516,44 +397,6 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
               </div>
             );
           })}
-        </div>
-      </div>
-
-      <div className={`${surface} p-6`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`p-4 ${softSurface}`}>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{text.alerts.success}</p>
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 mt-1">
-                  {language === "vi" ? "Không cần khởi động lại." : "No restart required."}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className={`p-4 ${softSurface}`}>
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">{text.alerts.warning}</p>
-                <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1">
-                  {language === "vi" ? "Hãy bật lại khi kiểm thử xong." : "Re-enable after testing."}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className={`p-4 ${softSurface}`}>
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">{text.alerts.info}</p>
-                <p className="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">
-                  {language === "vi" ? "Khoá thay đổi ngoài ý muốn." : "Locks against unintended changes."}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
